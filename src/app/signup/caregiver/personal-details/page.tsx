@@ -145,8 +145,9 @@ export default function PersonalDetailsPage() {
 
               {/* Create Account Button */}
               <button
-                type="submit"
+                type="button"
                 className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                onClick={() => window.location.href = '/caregiver/welcome'}
               >
                 Create Account
               </button>

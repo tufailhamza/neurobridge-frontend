@@ -38,7 +38,7 @@ export default function ContentPreferencesPage() {
     // Handle continue logic here
     console.log('Selected topics:', selectedTopics);
     // Navigate to next step
-    router.push('/caregiver/home');
+    router.push('/clinician/home');
   };
 
   return (
@@ -84,7 +84,7 @@ export default function ContentPreferencesPage() {
                 Save
               </button>
               <button
-                onClick={() => router.push('/caregiver/home')}
+                onClick={() => router.push('/clinician/home')}
                 className="px-8 pr-16 py-3 font-semibold text-b hover:text-a-hover transition-colors duration-200 focus:outline-none"
               >
                 Skip →

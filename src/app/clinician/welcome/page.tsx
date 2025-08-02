@@ -9,7 +9,7 @@ export default function CaregiverWelcomePage() {
 
   const handleReady = () => {
     // Navigate to the next step in caregiver signup flow
-    router.push('/caregiver/content-preferences');
+    router.push('/clinician/content-preferences');
   };
 
   return (
