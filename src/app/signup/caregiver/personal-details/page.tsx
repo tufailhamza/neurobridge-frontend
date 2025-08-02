@@ -70,7 +70,7 @@ export default function PersonalDetailsPage() {
               {/* Child's Age Field */}
               <div>
                 <label htmlFor="childAge" className="block text-sm font-medium text-b mb-2">
-                  Child's Age
+                  Child&apos;s Age
                 </label>
                 <input
                   id="childAge"

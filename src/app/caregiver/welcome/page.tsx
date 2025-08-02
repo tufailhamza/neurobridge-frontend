@@ -33,7 +33,7 @@ export default function CaregiverWelcomePage() {
             {/* Subtitle */}
             <div className="mb-12">
               <h2 className="text-xl text-gray-700 leading-relaxed">
-                Let's build something special together
+                Let&apos;s build something special together
               </h2>
             </div>
 
@@ -42,7 +42,7 @@ export default function CaregiverWelcomePage() {
               onClick={handleReady}
               className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-lg"
             >
-              I'm Ready
+                              I&apos;m Ready
             </button>
           </div>
         </div>
