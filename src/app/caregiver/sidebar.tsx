@@ -9,6 +9,7 @@ export default function CaregiverSidebar() {
 
   const menuItems = [
     { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { id: 'profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
     { id: 'library', label: 'Library', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
     { id: 'subscribed', label: 'Subscribed', icon: 'M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h6v-2H4v2zM4 11h6V9H4v2zM4 7h6V5H4v2zM10 7h10V5H10v2zM10 11h10V9H10v2zM10 15h10v-2H10v2zM10 19h10v-2H10v2z' },
     { id: 'purchased', label: 'Purchased', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
@@ -17,8 +18,30 @@ export default function CaregiverSidebar() {
 
   const handleItemClick = (itemId: string) => {
     setActiveItem(itemId);
-    // Add navigation logic here
-    // router.push(`/caregiver/${itemId}`);
+    
+    // Navigation logic
+    switch (itemId) {
+      case 'home':
+        router.push('/caregiver/home');
+        break;
+      case 'profile':
+        router.push('/caregiver/profile');
+        break;
+      case 'library':
+        router.push('/caregiver/library');
+        break;
+      case 'subscribed':
+        router.push('/caregiver/subscribed');
+        break;
+      case 'purchased':
+        router.push('/caregiver/purchased');
+        break;
+      case 'settings':
+        router.push('/caregiver/settings');
+        break;
+      default:
+        router.push('/caregiver/home');
+    }
   };
 
   return (
@@ -29,7 +52,7 @@ export default function CaregiverSidebar() {
         <img 
           src="/logo.png" 
           alt="Neurobridge Logo" 
-          className="w-40 h-auto"
+          className="w-64 h-auto"
         />
       </div>
 
