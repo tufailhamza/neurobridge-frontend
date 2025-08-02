@@ -9,12 +9,12 @@ export default function SignupModePage() {
 
   const handleCaregiverSignup = () => {
     // Navigate to caregiver signup
-    router.push('/signup?mode=caregiver');
+    router.push('/signup/caregiver');
   };
 
   const handleClinicianSignup = () => {
     // Navigate to clinician signup
-    router.push('/signup?mode=clinician');
+    router.push('/signup/clinician');
   };
 
   return (
