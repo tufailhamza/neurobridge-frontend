@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function CaregiverSidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [activeItem, setActiveItem] = useState('home');
+
+  // Update active item based on current pathname
+  useEffect(() => {
+    const path = pathname.split('/').pop() || 'home';
+    setActiveItem(path);
+  }, [pathname]);
 
   const menuItems = [
     { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },

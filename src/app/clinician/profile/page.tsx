@@ -57,10 +57,10 @@ export default function CaregiverProfilePage() {
       <CaregiverSidebar />
       
       {/* Main Content */}
-      <div className="ml-64 h-full flex">
+      <div className="ml-64  flex bg-d ">
         
         {/* Column B - Main Content */}
-        <div className="w-4/5 p-6">
+        <div className="w-4/5 p-6 bg-d">
           <div className="bg-white overflow-hidden">
             
             {/* Cover Image Section */}
@@ -167,6 +167,26 @@ export default function CaregiverProfilePage() {
                   </p>
                 </div>
               </div>
+
+              {/* Approach Section */}
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-b">My Approach</h2>
+                  <button 
+                    onClick={() => setIsBioModalOpen(true)}
+                    className="bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="bg-gray-50 rounded-lg ">
+                  <p className="text-black">
+                    {"Tell us about yourself..."}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -174,10 +194,69 @@ export default function CaregiverProfilePage() {
         {/* Column C - Content Preferences */}
         <div className="w-128 p-6">
           <div className="sticky top-6">
-            <ContentPreferences 
-              preferences={contentPreferences}
-              onEdit={handleContentPreferencesEdit}
-            />
+            <div className="space-y-6">
+              {/* Profile Link Section */}
+              <div className="space-y-3 p-4 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Profile Link</span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://neurobridge.com/profile/your-name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                />
+              </div>
+
+              {/* Allow Messages Section */}
+              <div className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl">
+                <span className="text-sm font-semibold text-gray-900">Allow Messages</span>
+                <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-b focus:ring-offset-2">
+                  <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+                </button>
+              </div>
+
+              {/* Areas of Expertise Section */}
+              <div className="space-y-3 p-4 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Areas of Expertise</span>
+                  <svg className="w-4 h-4 text-gray-400 cursor-pointer hover:text-b transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div className="text-sm text-gray-500">
+                  Click edit to manage your areas of expertise
+                </div>
+              </div>
+
+              {/* Languages Spoken Section */}
+              <div className="space-y-3 p-4 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Languages Spoken</span>
+                  <svg className="w-4 h-4 text-gray-400 cursor-pointer hover:text-b transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div className="text-sm text-gray-500">
+                  Click edit to manage languages you speak
+                </div>
+              </div>
+
+              {/* Content Preferences Section */}
+              <div className="space-y-3 p-4 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Content Preferences</span>
+                  <svg className="w-4 h-4 text-gray-400 cursor-pointer hover:text-b transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div className="text-sm text-gray-500">
+                  This is private to you and helps curate the content you see
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
