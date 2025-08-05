@@ -81,9 +81,12 @@ export default function MessagesPage() {
 
     // Initialize messages from localStorage or create default messages
     const [messages, setMessages] = useState<{ [key: number]: Message[] }>(() => {
-        const savedMessages = localStorage.getItem('clinicianChatMessages');
-        if (savedMessages) {
-            return JSON.parse(savedMessages);
+        // Check if we're in the browser environment
+        if (typeof window !== 'undefined') {
+            const savedMessages = localStorage.getItem('clinicianChatMessages');
+            if (savedMessages) {
+                return JSON.parse(savedMessages);
+            }
         }
         
         // Create default messages for each contact
@@ -104,7 +107,9 @@ export default function MessagesPage() {
 
     // Save messages to localStorage whenever they change
     useEffect(() => {
-        localStorage.setItem('clinicianChatMessages', JSON.stringify(messages));
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('clinicianChatMessages', JSON.stringify(messages));
+        }
     }, [messages]);
 
     // Function to send a message
