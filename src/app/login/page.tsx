@@ -3,17 +3,70 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    user_id: number;
+    email: string;
+    name: string;
+    role: string;
+  };
+  role: string;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', { email, password });
-    router.push('/clinician/home');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('http://localhost:8000/auth/login', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed. Please check your credentials.');
+      }
+
+      const data: LoginResponse = await response.json();
+      
+      // Store the token in localStorage (you might want to use a more secure method)
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('user_role', data.role);
+      localStorage.setItem('user_info', JSON.stringify(data.user));
+
+      // Route based on role
+      if (data.role === 'clinician') {
+        router.push('/clinician/home');
+      } else if (data.role === 'caregiver') {
+        router.push('/caregiver/home');
+      } else {
+        // Fallback for unknown roles
+        router.push('/clinician/home');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCreateAccount = () => {
@@ -103,20 +156,28 @@ export default function LoginPage() {
             </div>
 
 
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
+                {error}
+              </div>
+            )}
+
             {/* Login Button */}
             <button
               type="submit"
-              onClick={handleLogin}
-              className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              disabled={isLoading}
+              className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Log in
+              {isLoading ? 'Logging in...' : 'Log in'}
             </button>
 
             {/* Create Account Button */}
             <button
               type="button"
               onClick={handleCreateAccount}
-              className="w-full bg-d border border-gray-600 hover:bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none "
+              disabled={isLoading}
+              className="w-full bg-d border border-gray-600 hover:bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Account
             </button>
