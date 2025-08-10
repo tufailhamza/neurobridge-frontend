@@ -14,18 +14,14 @@ export default function SignupPage() {
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic here
     if (password !== confirmPassword) {
       alert('Passwords do not match!');
       return;
     }
-    console.log('Signup attempt:', { email, password });
+    
+    // Store basic info in localStorage
+    localStorage.setItem('signup_basic', JSON.stringify({ email, password }));
     router.push('/signup/mode');
-  };
-
-  const handleLogin = () => {
-    // Navigate to login page
-    router.push('/login');
   };
 
   const togglePasswordVisibility = () => {

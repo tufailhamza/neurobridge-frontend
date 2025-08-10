@@ -9,39 +9,84 @@ import { clinicianTypes, specializations } from '@/data/config';
 // Mock data for discover clinicians (clinicians not yet subscribed)
 const discoverClinicians: Clinician[] = [
   {
-    id: '6',
-    name: 'Dr. Jennifer Davis',
+    user_id: '6',
     specialty: 'Applied Behavior Analysis',
     profileImage: null,
-    isSubscribed: false
+    isSubscribed: false,
+    prefix: 'Dr.',
+    firstName: 'Jennifer',
+    lastName: 'Davis',
+    country: 'US',
+    city: 'Boston',
+    state: 'MA',
+    zipCode: '02101',
+    clinicianType: 'BCBA',
+    licenseNumber: 'LIC33333',
+    areaOfExpertise: 'Behavior Intervention Plans'
   },
   {
-    id: '7',
-    name: 'Dr. David Thompson',
+    user_id: '7',
     specialty: 'Social Skills Development',
     profileImage: null,
-    isSubscribed: false
+    isSubscribed: false,
+    prefix: 'Dr.',
+    firstName: 'David',
+    lastName: 'Thompson',
+    country: 'US',
+    city: 'Seattle',
+    state: 'WA',
+    zipCode: '98101',
+    clinicianType: 'BCBA',
+    licenseNumber: 'LIC44444',
+    areaOfExpertise: 'Social Skills Training'
   },
   {
-    id: '8',
-    name: 'Dr. Maria Garcia',
+    user_id: '8',
     specialty: 'Cognitive Behavioral Therapy',
     profileImage: null,
-    isSubscribed: false
+    isSubscribed: false,
+    prefix: 'Dr.',
+    firstName: 'Maria',
+    lastName: 'Garcia',
+    country: 'US',
+    city: 'Miami',
+    state: 'FL',
+    zipCode: '33101',
+    clinicianType: 'BCBA',
+    licenseNumber: 'LIC55555',
+    areaOfExpertise: 'Trauma-Informed ABA'
   },
   {
-    id: '9',
-    name: 'Dr. James Brown',
+    user_id: '9',
     specialty: 'Family Therapy',
     profileImage: null,
-    isSubscribed: false
+    isSubscribed: false,
+    prefix: 'Dr.',
+    firstName: 'James',
+    lastName: 'Brown',
+    country: 'US',
+    city: 'Denver',
+    state: 'CO',
+    zipCode: '80201',
+    clinicianType: 'BCBA',
+    licenseNumber: 'LIC66666',
+    areaOfExpertise: 'Social Skills Training'
   },
   {
-    id: '10',
-    name: 'Dr. Amanda Lee',
+    user_id: '10',
     specialty: 'Play Therapy',
     profileImage: null,
-    isSubscribed: false
+    isSubscribed: false,
+    prefix: 'Dr.',
+    firstName: 'Amanda',
+    lastName: 'Lee',
+    country: 'US',
+    city: 'Portland',
+    state: 'OR',
+    zipCode: '97201',
+    clinicianType: 'BCBA',
+    licenseNumber: 'LIC77777',
+    areaOfExpertise: 'Play-Based Therapy'
   }
 ];
 
@@ -58,7 +103,7 @@ export default function SubscribedPage() {
 
 
   const handleDelete = (clinicianId: string) => {
-    setSubscribedClinicians(prev => prev.filter(c => c.id !== clinicianId));
+    setSubscribedClinicians(prev => prev.filter(c => c.user_id !== clinicianId));
   };
 
   const handleMessage = (clinicianId: string) => {
@@ -66,12 +111,12 @@ export default function SubscribedPage() {
   };
 
   const handleSubscribe = (clinicianId: string) => {
-    const clinicianToSubscribe = discoverCliniciansList.find(c => c.id === clinicianId);
+    const clinicianToSubscribe = discoverCliniciansList.find(c => c.user_id === clinicianId);
     if (clinicianToSubscribe) {
       // Add to subscribed list
       setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, isSubscribed: true }]);
       // Remove from discover list
-      setDiscoverCliniciansList(prev => prev.filter(c => c.id !== clinicianId));
+      setDiscoverCliniciansList(prev => prev.filter(c => c.user_id !== clinicianId));
     }
   };
 
@@ -79,10 +124,14 @@ export default function SubscribedPage() {
     return activeTab === 'subscribed' ? subscribedClinicians : discoverCliniciansList;
   };
 
-  const filteredClinicians = getCurrentClinicians().filter(clinician =>
-    clinician.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    clinician.specialty.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredClinicians = getCurrentClinicians().filter(clinician => {
+    const fullName = `${clinician.firstName || ''} ${clinician.lastName || ''}`.toLowerCase();
+    const searchLower = searchQuery.toLowerCase();
+    
+    return fullName.includes(searchLower) ||
+           (clinician.specialty || '').toLowerCase().includes(searchLower) ||
+           (clinician.areaOfExpertise || '').toLowerCase().includes(searchLower);
+  });
 
   return (
     <div className="h-screen bg-d">
@@ -203,20 +252,23 @@ export default function SubscribedPage() {
           <div className="space-y-4">
             {filteredClinicians.map((clinician) => (
               <div
-                key={clinician.id}
+                key={clinician.user_id}
                 className="bg-white rounded-lg border border-gray-200 p-4 flex items-center justify-between hover:shadow-md transition-shadow"
               >
                 {/* Left Side - Profile and Info */}
                 <div className="flex items-center space-x-4">
                   {/* Profile Icon */}
                   <div className="w-12 h-12 rounded-full bg-b flex items-center justify-center text-white font-bold text-lg">
-                    {clinician.name.split(' ').map(n => n[0]).join('')}
+                    {(clinician.firstName?.charAt(0) || '')}{(clinician.lastName?.charAt(0) || '') || '?'}
                   </div>
                   
                   {/* Clinician Info */}
                   <div>
-                    <h3 className="font-semibold text-gray-900">{clinician.name}</h3>
-                    <p className="text-gray-600 text-sm">{clinician.specialty}</p>
+                    <h3 className="font-semibold text-gray-900">
+                      {clinician.prefix || ''} {clinician.firstName || ''} {clinician.lastName || ''}
+                    </h3>
+                    <p className="text-gray-600 text-sm">{clinician.specialty || 'No specialty'}</p>
+                    <p className="text-gray-500 text-xs">{clinician.areaOfExpertise || 'No expertise area'}</p>
                   </div>
                 </div>
 
@@ -226,7 +278,7 @@ export default function SubscribedPage() {
                     <>
                       {/* Message Button */}
                       <button
-                        onClick={() => handleMessage(clinician.id)}
+                        onClick={() => handleMessage(clinician.user_id)}
                         className=" text-b border-2 border-b px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors flex items-center space-x-2"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +289,7 @@ export default function SubscribedPage() {
 
                       {/* Delete Button */}
                       <button
-                        onClick={() => handleDelete(clinician.id)}
+                        onClick={() => handleDelete(clinician.user_id)}
                         className=" text-b p-2 rounded-lg"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,7 +300,7 @@ export default function SubscribedPage() {
                   ) : (
                     /* Subscribe Button for Discover Tab */
                     <button
-                      onClick={() => handleSubscribe(clinician.id)}
+                      onClick={() => handleSubscribe(clinician.user_id)}
                       className="bg-b text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors flex items-center space-x-2"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/login/Header';
+import { env } from '@/config/env';
 
 export default function PersonalDetailsPage() {
   const router = useRouter();
@@ -11,12 +12,82 @@ export default function PersonalDetailsPage() {
   const [diagnosis, setDiagnosis] = useState('');
   const [yearsOfDiagnosis, setYearsOfDiagnosis] = useState('');
 
-  const handleCreateAccount = (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle account creation logic here
-    console.log('Personal details:', { caregiverRole, childAge, diagnosis, yearsOfDiagnosis });
-    // Navigate to success page or dashboard
-    // router.push('/dashboard');
+    
+    try {
+      // Get all stored data
+      const basicInfo = JSON.parse(localStorage.getItem('signup_basic') || '{}');
+      const accountType = localStorage.getItem('signup_type');
+      const generalInfo = JSON.parse(localStorage.getItem('signup_general') || '{}');
+      const personalInfo = { caregiverRole, childAge, diagnosis, yearsOfDiagnosis };
+      
+      // Store personal details in localStorage for profile access
+      localStorage.setItem('signup_personal', JSON.stringify(personalInfo));
+      
+      // Combine all data
+      const signupData = {
+        ...basicInfo,
+        accountType,
+        ...generalInfo,
+        ...personalInfo
+      };
+      
+      console.log('Complete signup data:', signupData);
+      
+      // Send to backend API
+      const response = await fetch(`${env.BACKEND_URL}/auth/signup/caregiver`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signupData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create account');
+      }
+
+      const signupResponse = await response.json();
+      
+      // Auto-login after successful signup
+      try {
+        const loginResponse = await fetch(`${env.BACKEND_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: signupData.email,
+            password: signupData.password
+          })
+        });
+
+        if (!loginResponse.ok) {
+          throw new Error('Auto-login failed');
+        }
+
+        const loginData = await loginResponse.json();
+        
+        // Store the token and user info in localStorage (same as login page)
+        localStorage.setItem('access_token', loginData.access_token);
+        localStorage.setItem('user_role', loginData.role);
+        localStorage.setItem('user_info', JSON.stringify(loginData.user));
+        
+        // Clear signup data
+        localStorage.removeItem('signup_basic');
+        localStorage.removeItem('signup_type');
+        localStorage.removeItem('signup_general');
+        
+        // Redirect to caregiver home page (logged in)
+        router.push('/caregiver/home');
+        
+      } catch (loginError) {
+        console.error('Auto-login error:', loginError);
+        // If auto-login fails, still redirect to welcome page
+        router.push('/caregiver/welcome');
+      }
+      
+    } catch (error) {
+      console.error('Signup error:', error);
+      alert('Error creating account. Please try again.');
+    }
   };
 
   return (
@@ -145,9 +216,8 @@ export default function PersonalDetailsPage() {
 
               {/* Create Account Button */}
               <button
-                type="button"
+                type="submit"
                 className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                onClick={() => window.location.href = '/caregiver/welcome'}
               >
                 Create Account
               </button>

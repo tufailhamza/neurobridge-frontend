@@ -10,8 +10,28 @@ export default function ClinicianSidebar() {
 
   // Update active item based on current pathname
   useEffect(() => {
-    const path = pathname.split('/').pop() || 'home';
-    setActiveItem(path);
+    // Extract the relevant part of the path for highlighting
+    const pathParts = pathname.split('/');
+    
+    // Check if we're on a specific route that should highlight a menu item
+    if (pathParts.includes('profile')) {
+      setActiveItem('profile');
+    } else if (pathParts.includes('library')) {
+      setActiveItem('library');
+    } else if (pathParts.includes('subscribed')) {
+      setActiveItem('subscribed');
+    } else if (pathParts.includes('messages')) {
+      setActiveItem('messages');
+    } else if (pathParts.includes('purchased')) {
+      setActiveItem('purchased');
+    } else if (pathParts.includes('settings')) {
+      setActiveItem('settings');
+    } else if (pathParts.includes('home') || pathname === '/clinician' || pathname === '/clinician/') {
+      setActiveItem('home');
+    } else {
+      // For other routes like content, content-preferences, etc., default to home
+      setActiveItem('home');
+    }
   }, [pathname]);
 
   const menuItems = [

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { env } from '@/config/env';
 
 interface LoginResponse {
   access_token: string;
@@ -30,7 +31,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${env.BACKEND_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -52,13 +53,14 @@ export default function LoginPage() {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user_role', data.role);
       localStorage.setItem('user_info', JSON.stringify(data.user));
-
+      
       // Route based on role
-      if (data.role === 'clinician') {
+      if (data.user.role === 'clinician') {
         router.push('/clinician/home');
-      } else if (data.role === 'caregiver') {
+      } else if (data.user.role === 'caregiver' || data.user.role === 'caretaker') {
         router.push('/caregiver/home');
       } else {
+        console.log('Unknown role:', data);
         // Fallback for unknown roles
         router.push('/clinician/home');
       }

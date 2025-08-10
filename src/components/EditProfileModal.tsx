@@ -119,10 +119,38 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                 onChange={(e) => handleInputChange('country', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
               >
+                <option value="">Select country</option>
                 <option value="United States">United States</option>
                 <option value="Canada">Canada</option>
                 <option value="United Kingdom">United Kingdom</option>
                 <option value="Australia">Australia</option>
+                <option value="Germany">Germany</option>
+                <option value="France">France</option>
+                <option value="Italy">Italy</option>
+                <option value="Spain">Spain</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="Belgium">Belgium</option>
+                <option value="Switzerland">Switzerland</option>
+                <option value="Austria">Austria</option>
+                <option value="Sweden">Sweden</option>
+                <option value="Norway">Norway</option>
+                <option value="Denmark">Denmark</option>
+                <option value="Finland">Finland</option>
+                <option value="New Zealand">New Zealand</option>
+                <option value="Japan">Japan</option>
+                <option value="South Korea">South Korea</option>
+                <option value="Singapore">Singapore</option>
+                <option value="India">India</option>
+                <option value="Brazil">Brazil</option>
+                <option value="Mexico">Mexico</option>
+                <option value="Argentina">Argentina</option>
+                <option value="Chile">Chile</option>
+                <option value="South Africa">South Africa</option>
+                <option value="Egypt">Egypt</option>
+                <option value="Nigeria">Nigeria</option>
+                <option value="Kenya">Kenya</option>
+                <option value="Morocco">Morocco</option>
+                <option value="Other">Other</option>
               </select>
             </div>
 
@@ -144,10 +172,57 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('state', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                 >
+                  <option value="">Select state</option>
+                  <option value="Alabama">Alabama</option>
+                  <option value="Alaska">Alaska</option>
+                  <option value="Arizona">Arizona</option>
+                  <option value="Arkansas">Arkansas</option>
                   <option value="California">California</option>
-                  <option value="New York">New York</option>
-                  <option value="Texas">Texas</option>
+                  <option value="Colorado">Colorado</option>
+                  <option value="Connecticut">Connecticut</option>
+                  <option value="Delaware">Delaware</option>
                   <option value="Florida">Florida</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Hawaii">Hawaii</option>
+                  <option value="Idaho">Idaho</option>
+                  <option value="Illinois">Illinois</option>
+                  <option value="Indiana">Indiana</option>
+                  <option value="Iowa">Iowa</option>
+                  <option value="Kansas">Kansas</option>
+                  <option value="Kentucky">Kentucky</option>
+                  <option value="Louisiana">Louisiana</option>
+                  <option value="Maine">Maine</option>
+                  <option value="Maryland">Maryland</option>
+                  <option value="Massachusetts">Massachusetts</option>
+                  <option value="Michigan">Michigan</option>
+                  <option value="Minnesota">Minnesota</option>
+                  <option value="Mississippi">Mississippi</option>
+                  <option value="Missouri">Missouri</option>
+                  <option value="Montana">Montana</option>
+                  <option value="Nebraska">Nebraska</option>
+                  <option value="Nevada">Nevada</option>
+                  <option value="New Hampshire">New Hampshire</option>
+                  <option value="New Jersey">New Jersey</option>
+                  <option value="New Mexico">New Mexico</option>
+                  <option value="New York">New York</option>
+                  <option value="North Carolina">North Carolina</option>
+                  <option value="North Dakota">North Dakota</option>
+                  <option value="Ohio">Ohio</option>
+                  <option value="Oklahoma">Oklahoma</option>
+                  <option value="Oregon">Oregon</option>
+                  <option value="Pennsylvania">Pennsylvania</option>
+                  <option value="Rhode Island">Rhode Island</option>
+                  <option value="South Carolina">South Carolina</option>
+                  <option value="South Dakota">South Dakota</option>
+                  <option value="Tennessee">Tennessee</option>
+                  <option value="Texas">Texas</option>
+                  <option value="Utah">Utah</option>
+                  <option value="Vermont">Vermont</option>
+                  <option value="Virginia">Virginia</option>
+                  <option value="Washington">Washington</option>
+                  <option value="West Virginia">West Virginia</option>
+                  <option value="Wisconsin">Wisconsin</option>
+                  <option value="Wyoming">Wyoming</option>
                 </select>
               </div>
               <div>
@@ -190,10 +265,19 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('caregiverRole', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                 >
+                  <option value="">Select caregiver role</option>
                   <option value="Parent">Parent</option>
                   <option value="Guardian">Guardian</option>
+                  <option value="Foster Parent">Foster Parent</option>
+                  <option value="Adoptive Parent">Adoptive Parent</option>
                   <option value="Grandparent">Grandparent</option>
+                  <option value="Aunt/Uncle">Aunt/Uncle</option>
                   <option value="Sibling">Sibling</option>
+                  <option value="Legal Guardian">Legal Guardian</option>
+                  <option value="Step Parent">Step Parent</option>
+                  <option value="Other Family Member">Other Family Member</option>
+                  <option value="Family Friend">Family Friend</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div>
@@ -204,6 +288,8 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('childsAge', parseInt(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Enter age"
+                  min="0"
+                  max="25"
                 />
               </div>
             </div>
@@ -216,10 +302,29 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('diagnosis', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                 >
+                  <option value="">Select diagnosis</option>
                   <option value="Autism Spectrum Disorder">Autism Spectrum Disorder</option>
-                  <option value="ADHD">ADHD</option>
+                  <option value="ADHD">Attention Deficit Hyperactivity Disorder (ADHD)</option>
+                  <option value="Learning Disability">Learning Disability</option>
+                  <option value="Developmental Delay">Developmental Delay</option>
                   <option value="Down Syndrome">Down Syndrome</option>
                   <option value="Cerebral Palsy">Cerebral Palsy</option>
+                  <option value="Intellectual Disability">Intellectual Disability</option>
+                  <option value="Speech Disorder">Speech Disorder</option>
+                  <option value="Language Disorder">Language Disorder</option>
+                  <option value="Sensory Processing Disorder">Sensory Processing Disorder</option>
+                  <option value="Anxiety Disorder">Anxiety Disorder</option>
+                  <option value="Depression">Depression</option>
+                  <option value="Bipolar Disorder">Bipolar Disorder</option>
+                  <option value="Obsessive-Compulsive Disorder">Obsessive-Compulsive Disorder</option>
+                  <option value="Tourette Syndrome">Tourette Syndrome</option>
+                  <option value="Fragile X Syndrome">Fragile X Syndrome</option>
+                  <option value="Prader-Willi Syndrome">Prader-Willi Syndrome</option>
+                  <option value="Williams Syndrome">Williams Syndrome</option>
+                  <option value="Fetal Alcohol Syndrome">Fetal Alcohol Syndrome</option>
+                  <option value="Multiple Diagnoses">Multiple Diagnoses</option>
+                  <option value="Undiagnosed">Undiagnosed</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div>
@@ -230,6 +335,8 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('yearsOfDiagnosis', parseInt(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Enter years"
+                  min="0"
+                  max="25"
                 />
               </div>
             </div>

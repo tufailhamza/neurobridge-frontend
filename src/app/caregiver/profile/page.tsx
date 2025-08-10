@@ -1,43 +1,172 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CaregiverSidebar from '../sidebar';
-import { mockCaregiver } from '@/data/mockCaregiver';
 import EditProfileModal from '@/components/EditProfileModal';
 import EditBioModal from '@/components/EditBioModal';
 import ImageUpload from '@/components/ImageUpload';
 import ContentPreferences from '@/components/ContentPreferences';
 import ContentPreferencesModal from '@/components/ContentPreferencesModal';
+import { Caregiver } from '@/types/Caregiver';
 
 export default function CaregiverProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBioModalOpen, setIsBioModalOpen] = useState(false);
   const [isContentPreferencesModalOpen, setIsContentPreferencesModalOpen] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(mockCaregiver.profileImage);
-  const [coverImage, setCoverImage] = useState<string | null>(mockCaregiver.coverImage);
-  const [contentPreferences, setContentPreferences] = useState<string[]>(mockCaregiver.contentPreferencesTags);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [contentPreferences, setContentPreferences] = useState<string[]>([]);
+  const [caregiverData, setCaregiverData] = useState<Caregiver | null>(null);
 
-  const handleSave = (updatedData: any) => {
-    // Here you would typically save to backend
-    console.log('Saving profile data:', updatedData);
+  // Get caregiver data from localStorage or create default
+  const getCaregiverData = (): Caregiver => {
+    if (typeof window === 'undefined') {
+      return getDefaultCaregiverData();
+    }
+
+    // First check if we have existing profile data
+    const existingProfile = localStorage.getItem('caregiver_profile');
+    if (existingProfile) {
+      try {
+        return JSON.parse(existingProfile);
+      } catch (e) {
+        console.error('Error parsing existing profile:', e);
+      }
+    }
+
+    // Try to get from signup localStorage data
+    const userInfo = localStorage.getItem('user_info');
+    const signupGeneral = localStorage.getItem('signup_general');
+    const signupPersonal = localStorage.getItem('signup_personal');
+    
+    if (userInfo && signupGeneral) {
+      const user = JSON.parse(userInfo);
+      const general = JSON.parse(signupGeneral);
+      const personal = signupPersonal ? JSON.parse(signupPersonal) : {};
+      
+      return {
+        firstName: general.firstName || user.name?.split(' ')[0] || '',
+        lastName: general.lastName || user.name?.split(' ')[1] || '',
+        username: user.email?.split('@')[0] || '',
+        country: general.country || '',
+        city: general.city || '',
+        state: general.state || '',
+        zipCode: general.zipCode || '',
+        caregiverRole: personal.caregiverRole || '',
+        childsAge: personal.childAge ? parseInt(personal.childAge) : 0,
+        diagnosis: personal.diagnosis || '',
+        yearsOfDiagnosis: personal.yearsOfDiagnosis ? parseInt(personal.yearsOfDiagnosis) : 0,
+        makeNamePublic: true,
+        makePersonalDetailsPublic: false,
+        profileImage: null,
+        coverImage: null,
+        contentPreferencesTags: ['Autism', 'ADHD', 'Parenting Tips'],
+        bio: 'Tell us about yourself...',
+        subscribedCliniciansIds: [],
+        purchasedFeedContentIds: []
+      };
+    }
+    
+    return getDefaultCaregiverData();
+  };
+
+  const getDefaultCaregiverData = (): Caregiver => {
+    return {
+      firstName: 'Caregiver',
+      lastName: 'User',
+      username: 'caregiver',
+      country: 'United States',
+      city: 'City',
+      state: 'State',
+      zipCode: '12345',
+      caregiverRole: 'Parent',
+      childsAge: 0,
+      diagnosis: 'Not specified',
+      yearsOfDiagnosis: 0,
+      makeNamePublic: true,
+      makePersonalDetailsPublic: false,
+      profileImage: null,
+      coverImage: null,
+      contentPreferencesTags: ['Autism', 'ADHD', 'Parenting Tips'],
+      bio: 'Tell us about yourself...',
+      subscribedCliniciansIds: [],
+      purchasedFeedContentIds: []
+    };
+  };
+
+  useEffect(() => {
+    const data = getCaregiverData();
+    setCaregiverData(data);
+    setContentPreferences(data.contentPreferencesTags);
+    
+    // Load existing images if they exist
+    if (data.profileImage) {
+      setProfileImage(data.profileImage);
+    }
+    if (data.coverImage) {
+      setCoverImage(data.coverImage);
+    }
+  }, []);
+
+  const handleSave = (updatedData: Partial<Caregiver>) => {
+    if (caregiverData) {
+      const newData = { ...caregiverData, ...updatedData };
+      setCaregiverData(newData);
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
+      }
+      
+      console.log('Saving profile data:', updatedData);
+    }
   };
 
   const handleBioSave = (newBio: string) => {
-    // Here you would typically save to backend
-    console.log('Saving bio:', newBio);
+    if (caregiverData) {
+      const newData = { ...caregiverData, bio: newBio };
+      setCaregiverData(newData);
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
+      }
+      
+      console.log('Saving bio:', newBio);
+    }
   };
 
   const handleProfileImageChange = (file: File) => {
     const imageUrl = URL.createObjectURL(file);
     setProfileImage(imageUrl);
-    // Here you would typically upload to backend
+    
+    if (caregiverData) {
+      const newData = { ...caregiverData, profileImage: imageUrl };
+      setCaregiverData(newData);
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
+      }
+    }
+    
     console.log('Uploading profile image:', file);
   };
 
   const handleCoverImageChange = (file: File) => {
     const imageUrl = URL.createObjectURL(file);
     setCoverImage(imageUrl);
-    // Here you would typically upload to backend
+    
+    if (caregiverData) {
+      const newData = { ...caregiverData, coverImage: imageUrl };
+      setCaregiverData(newData);
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
+      }
+    }
+    
     console.log('Uploading cover image:', file);
   };
 
@@ -47,9 +176,23 @@ export default function CaregiverProfilePage() {
 
   const handleContentPreferencesSave = (newPreferences: string[]) => {
     setContentPreferences(newPreferences);
-    // Here you would typically save to backend
+    
+    if (caregiverData) {
+      const newData = { ...caregiverData, contentPreferencesTags: newPreferences };
+      setCaregiverData(newData);
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
+      }
+    }
+    
     console.log('Saving content preferences:', newPreferences);
   };
+
+  if (!caregiverData) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="h-screen bg-d">
@@ -110,7 +253,7 @@ export default function CaregiverProfilePage() {
                   <div 
                     className={`w-32 h-32 rounded-full border-4 border-white shadow-lg bg-b flex items-center justify-center text-white text-3xl font-bold ${profileImage ? 'hidden' : 'flex'}`}
                   >
-                    {mockCaregiver.firstName.charAt(0)}{mockCaregiver.lastName.charAt(0)}
+                    {caregiverData.firstName.charAt(0)}{caregiverData.lastName.charAt(0)}
                   </div>
                   
                   {/* Edit Icon for Profile */}
@@ -134,9 +277,18 @@ export default function CaregiverProfilePage() {
               {/* Name and Edit Row */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-b">{mockCaregiver.firstName} {mockCaregiver.lastName}</h1>
-                  <p className="text-gray-600 text-lg">@{mockCaregiver.username}</p>
-                  <p className="text-gray-500">{mockCaregiver.city}, {mockCaregiver.state}</p>
+                  <h1 className="text-3xl font-bold text-b">{caregiverData.firstName} {caregiverData.lastName}</h1>
+                  <p className="text-gray-600 text-lg">@{caregiverData.username}</p>
+                  <p className="text-gray-500">{caregiverData.city}, {caregiverData.state}</p>
+                  {caregiverData.caregiverRole && (
+                    <p className="text-gray-500 text-sm mt-1">Role: {caregiverData.caregiverRole}</p>
+                  )}
+                  {caregiverData.childsAge > 0 && (
+                    <p className="text-gray-500 text-sm">Child's Age: {caregiverData.childsAge} years</p>
+                  )}
+                  {caregiverData.diagnosis && caregiverData.diagnosis !== 'Not specified' && (
+                    <p className="text-gray-500 text-sm">Diagnosis: {caregiverData.diagnosis}</p>
+                  )}
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(true)}
@@ -161,9 +313,9 @@ export default function CaregiverProfilePage() {
                     </svg>
                   </button>
                 </div>
-                <div className="bg-gray-50 rounded-lg ">
+                <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-black">
-                    {mockCaregiver.bio || "Tell us about yourself..."}
+                    {caregiverData.bio || "Tell us about yourself..."}
                   </p>
                 </div>
               </div>
@@ -186,7 +338,7 @@ export default function CaregiverProfilePage() {
       <EditProfileModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        caregiver={mockCaregiver}
+        caregiver={caregiverData}
         onSave={handleSave}
       />
 
@@ -194,7 +346,7 @@ export default function CaregiverProfilePage() {
       <EditBioModal
         isOpen={isBioModalOpen}
         onClose={() => setIsBioModalOpen(false)}
-        currentBio={mockCaregiver.bio}
+        currentBio={caregiverData.bio}
         onSave={handleBioSave}
       />
 

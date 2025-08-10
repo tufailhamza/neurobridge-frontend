@@ -8,12 +8,14 @@ export default function SignupModePage() {
   const router = useRouter();
 
   const handleCaregiverSignup = () => {
-    // Navigate to caregiver signup
+    // Store account type and navigate
+    localStorage.setItem('signup_type', 'caregiver');
     router.push('/signup/caregiver');
   };
 
   const handleClinicianSignup = () => {
-    // Navigate to clinician signup
+    // Store account type and navigate
+    localStorage.setItem('signup_type', 'clinician');
     router.push('/signup/clinician');
   };
 

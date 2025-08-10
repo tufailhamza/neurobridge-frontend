@@ -2,38 +2,83 @@ import { Clinician } from '@/types/Clinician';
 
 export const mockClinicians: Clinician[] = [
     {
-      id: '1',
-      name: 'Dr. Sarah Smith',
+      user_id: '1',
       specialty: 'Speech and Language Therapy',
       profileImage: null,
-      isSubscribed: true
+      isSubscribed: true,
+      prefix: 'Dr.',
+      firstName: 'Sarah',
+      lastName: 'Smith',
+      country: 'US',
+      city: 'New York',
+      state: 'NY',
+      zipCode: '10001',
+      clinicianType: 'SLP',
+      licenseNumber: 'LIC12345',
+      areaOfExpertise: 'Articulation & Phonological Disorders'
     },
     {
-      id: '2',
-      name: 'Dr. Michael Chen',
+      user_id: '2',
       specialty: 'Behavioral Intervention',
       profileImage: null,
-      isSubscribed: true
+      isSubscribed: true,
+      prefix: 'Dr.',
+      firstName: 'Michael',
+      lastName: 'Chen',
+      country: 'US',
+      city: 'Los Angeles',
+      state: 'CA',
+      zipCode: '90001',
+      clinicianType: 'BCBA',
+      licenseNumber: 'LIC54321',
+      areaOfExpertise: 'Behavior Intervention Plans'
     },
     {
-      id: '3',
-      name: 'Dr. Emily Rodriguez',
+      user_id: '3',
       specialty: 'Occupational Therapy',
       profileImage: null,
-      isSubscribed: true
+      isSubscribed: true,
+      prefix: 'Dr.',
+      firstName: 'Emily',
+      lastName: 'Rodriguez',
+      country: 'US',
+      city: 'Chicago',
+      state: 'IL',
+      zipCode: '60601',
+      clinicianType: 'OTR',
+      licenseNumber: 'LIC67890',
+      areaOfExpertise: 'Adaptive Living Skills'
     },
     {
-      id: '4',
-      name: 'Dr. Robert Wilson',
+      user_id: '4',
       specialty: 'Physical Therapy',
       profileImage: null,
-      isSubscribed: true
+      isSubscribed: true,
+      prefix: 'Dr.',
+      firstName: 'Robert',
+      lastName: 'Wilson',
+      country: 'US',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77001',
+      clinicianType: 'PT',
+      licenseNumber: 'LIC11111',
+      areaOfExpertise: 'Gross Motor Skill Development'
     },
     {
-      id: '5',
-      name: 'Dr. Lisa Johnson',
+      user_id: '5',
       specialty: 'Sensory Processing',
       profileImage: null,
-      isSubscribed: true
+      isSubscribed: true,
+      prefix: 'Dr.',
+      firstName: 'Lisa',
+      lastName: 'Johnson',
+      country: 'US',
+      city: 'Phoenix',
+      state: 'AZ',
+      zipCode: '85001',
+      clinicianType: 'OTR',
+      licenseNumber: 'LIC22222',
+      areaOfExpertise: 'Sensory Processing Disorders (SPD)'
     }
   ];

@@ -16,9 +16,11 @@ export default function ClinicianSignupPage() {
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle next step logic here
-    console.log('General information:', { prefix, firstName, lastName, country, city, state, zipCode });
-    // Navigate to next step (professional details)
+    
+    // Store general info in localStorage
+    const generalInfo = { prefix, firstName, lastName, country, city, state, zipCode };
+    localStorage.setItem('signup_general', JSON.stringify(generalInfo));
+    
     router.push('/signup/clinician/professional-details');
   };
 

@@ -1,16 +1,17 @@
 export interface FeedCard {
   id: string;
-  imageUrl: string;
+  image_url: string;
   title: string;
-  doctor: {
-    name: string;
-    designation: string;
-    profileIcon: string;
-  };
+  user_id: string;
+  user_name: string;
   date: string;
-  readTime: string;
+  read_time: string;
   tags: string[];
   price: number;
-  imageColor: string;
-  htmlContent: string;
+  html_content: string;
+  allow_comments: boolean;
+  tier: string | null;
+  collection: string | null;
+  attachments: string[];
+  date_published: string;
 } 

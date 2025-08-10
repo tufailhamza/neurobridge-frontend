@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/login/Header';
 
-export default function ClinicianSignupPage() {
+export default function CaregiverSignupPage() {
   const router = useRouter();
   const [prefix, setPrefix] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -16,9 +16,11 @@ export default function ClinicianSignupPage() {
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle next step logic here
-    console.log('General information:', { prefix, firstName, lastName, country, city, state, zipCode });
-    // Navigate to next step (professional details)
+    
+    // Store general info in localStorage
+    const generalInfo = { prefix, firstName, lastName, country, city, state, zipCode };
+    localStorage.setItem('signup_general', JSON.stringify(generalInfo));
+    
     router.push('/signup/caregiver/personal-details');
   };
 
@@ -42,7 +44,26 @@ export default function ClinicianSignupPage() {
             </div>
 
             <form onSubmit={handleNext} className="space-y-6">
-             
+              {/* Prefix Field */}
+              <div>
+                <label htmlFor="prefix" className="block text-sm font-medium text-b mb-2">
+                  Prefix
+                </label>
+                <select
+                  id="prefix"
+                  name="prefix"
+                  value={prefix}
+                  onChange={(e) => setPrefix(e.target.value)}
+                  className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
+                >
+                  <option value="">Select prefix</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
 
               {/* Name Fields */}
             <div>

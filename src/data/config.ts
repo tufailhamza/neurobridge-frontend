@@ -1,5 +1,5 @@
 // Caregiver content preferences
-export const caregiverContentPreferences = [
+export const ContentPreferences = [
   'Speech & Language',
   'Functional Communication',
   'Behavior Support',

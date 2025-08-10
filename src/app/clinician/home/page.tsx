@@ -1,18 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import CaregiverSidebar from '../sidebar';
+import ClinicianSidebar from '../sidebar';
 import FeedCard from '@/components/FeedCard';
-import { feedCards } from '@/data/feedCards';
+import { FeedCard as FeedCardType } from '@/types/FeedCard';
+import { env } from '@/config/env';
 
-export default function CaregiverProfilePage() {
+export default function ClinicianHomePage() {
   const router = useRouter();
+  const [feedCards, setFeedCards] = useState<FeedCardType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch feed data from backend
+  useEffect(() => {
+    const fetchFeedData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=20`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch posts: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setFeedCards(data.results || data || []);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching feed data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch feed data');
+        // Fallback to empty array if API fails
+        setFeedCards([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedData();
+  }, []);
 
   return (
     <div className="h-full bg-d">
       {/* Sidebar */}
-      <CaregiverSidebar />
+      <ClinicianSidebar />
       
       {/* Main Content */}
       <div className="ml-64 h-full flex">
@@ -29,10 +60,33 @@ export default function CaregiverProfilePage() {
                 </div>
             </div>
             {/* Scrollable Cards List */}
-            <div className="space-y-6  overflow-y-auto">
-              {feedCards.map((card) => (
-                <FeedCard key={card.id} card={card} />
-              ))}
+            <div className="space-y-6 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-b mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading feed...</p>
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="px-4 py-2 bg-b text-white rounded-lg hover:bg-b-hover transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : feedCards.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600">No posts found.</p>
+                </div>
+              ) : (
+                feedCards.map((card) => (
+                  <FeedCard key={card.id} card={card} />
+                ))
+              )}
             </div>
           </div>
         </div>

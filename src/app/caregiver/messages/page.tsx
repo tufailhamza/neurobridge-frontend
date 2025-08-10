@@ -207,9 +207,6 @@ export default function MessagesPage() {
                                         <div className="text-xs text-gray-500 mb-1">
                                             {messages[contact.id]?.[messages[contact.id].length - 1]?.time || contact.time}
                                         </div>
-                                        {contact.isStarred && (
-                                            <Star size={16} className="text-yellow-500" fill="currentColor" />
-                                        )}
                                     </div>
                                 </div>
                             ))}

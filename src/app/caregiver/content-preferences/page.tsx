@@ -4,27 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/login/Header';
 import TopicPills from '@/components/login/caregiver/TopicPills';
+import { ContentPreferences } from '@/data/config';
 
 export default function ContentPreferencesPage() {
   const router = useRouter();
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-
-  const topics = [
-    'Speech and Language',
-    'Functional Communication',
-    'Behaviour Support',
-    'Fine Motor Skills',
-    'Sensory and Self Regulation',
-    'Gross Motor Skills',
-    'Skill Acquisition',
-    'Positive Behaviour Support',
-    'Toileting',
-    'Communication Tools and Alternatives (PECS, AAC)',
-    'Feeding and Eating Support',
-    'Activities of Daily Living',
-    'Planning and Moving (Motor Planning)',
-    'Walking, Balance and Moving Safely'
-  ];
 
   const handleTopicToggle = (topic: string) => {
     setSelectedTopics(prev => 
@@ -64,7 +48,7 @@ export default function ContentPreferencesPage() {
             {/* Topic Pills */}
             <div className="mb-8">
               <TopicPills
-                topics={topics}
+                topics={ContentPreferences}
                 selectedTopics={selectedTopics}
                 onTopicToggle={handleTopicToggle}
               />
