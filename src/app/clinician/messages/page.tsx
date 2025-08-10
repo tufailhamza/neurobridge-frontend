@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ClinicianSidebar from '../sidebar';
 import { Search, Filter, Star, Phone, Video, MoreHorizontal, Mic, Send, Archive } from 'lucide-react';
+import PubNubService, { PubNubMessage } from '../../../services/pubnub';
 
 interface Message {
-    id: number;
+    id: string;
     sender: string;
     text: string;
     time: string;
@@ -26,7 +27,57 @@ export default function MessagesPage() {
     const [activeTab, setActiveTab] = useState('all');
     const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
     const [messageInput, setMessageInput] = useState('');
+    const [messages, setMessages] = useState<{ [key: number]: Message[] }>({});
+    const [isLoading, setIsLoading] = useState(false);
     
+    // Refs for PubNub service and current channel
+    const pubnubService = useRef<PubNubService | null>(null);
+    const currentChannel = useRef<string | null>(null);
+    
+    // Helper function to format timestamps
+    const formatTimestamp = (timestamp: number | string): string => {
+        try {
+            // Handle different timestamp formats
+            let date: Date;
+            
+            if (typeof timestamp === 'string') {
+                // If it's a string, try to parse it
+                date = new Date(parseInt(timestamp));
+            } else if (typeof timestamp === 'number') {
+                // If it's a number, check if it's in seconds or milliseconds
+                if (timestamp < 1000000000000) {
+                    // Timestamp is in seconds, convert to milliseconds
+                    date = new Date(timestamp * 1000);
+                } else {
+                    // Timestamp is in milliseconds
+                    date = new Date(timestamp);
+                }
+            } else {
+                // Fallback to current time
+                date = new Date();
+            }
+            
+            // Check if the date is valid
+            if (isNaN(date.getTime())) {
+                return new Date().toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
+            
+            return date.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        } catch (error) {
+            console.warn('Error formatting timestamp:', error);
+            return new Date().toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            }
+        };
+
     // Sample contacts data
     const contacts: Contact[] = [
         { 
@@ -79,78 +130,141 @@ export default function MessagesPage() {
         },
     ];
 
-    // Initialize messages from localStorage or create default messages
-    const [messages, setMessages] = useState<{ [key: number]: Message[] }>(() => {
-        // Check if we're in the browser environment
-        if (typeof window !== 'undefined') {
-            const savedMessages = localStorage.getItem('clinicianChatMessages');
-            if (savedMessages) {
-                return JSON.parse(savedMessages);
+    // Initialize PubNub service
+    useEffect(() => {
+        pubnubService.current = PubNubService.getInstance();
+
+        // Cleanup on unmount
+        return () => {
+            if (pubnubService.current) {
+                pubnubService.current.cleanup();
             }
+        };
+    }, []);
+
+    // Function to handle contact selection and subscribe to channel
+    const handleContactClick = async (contact: Contact) => {
+        setSelectedContact(contact);
+        
+        // Unsubscribe from previous channel if exists
+        if (currentChannel.current && pubnubService.current) {
+            pubnubService.current.unsubscribeFromChannel(currentChannel.current);
         }
         
-        // Create default messages for each contact
-        const defaultMessages: { [key: number]: Message[] } = {};
-        contacts.forEach(contact => {
-            defaultMessages[contact.id] = [
-                {
-                    id: 1,
-                    sender: contact.name,
-                    text: 'Hi there! How can I help you today?',
-                    time: '10:30 AM',
-                    isMe: false
+        // Subscribe to new channel
+        const channelId = pubnubService.current?.getChannelName(contact.id);
+        if (channelId && pubnubService.current) {
+            currentChannel.current = channelId;
+            
+            // Load message history first
+            try {
+                console.log('Loading message history for contact:', contact.id);
+                const historyMessages = await pubnubService.current.getMessageHistory(channelId);
+                
+                if (historyMessages.length > 0) {
+                    // Convert PubNub messages to our Message format
+                    const formattedHistory = historyMessages.map(pubnubMsg => ({
+                        id: pubnubMsg.id,
+                        sender: pubnubMsg.sender,
+                        text: pubnubMsg.text,
+                        time: formatTimestamp(pubnubMsg.timestamp),
+                        isMe: pubnubMsg.isMe
+                    }));
+                    
+                    // Update messages state with history
+                    setMessages(prev => ({
+                        ...prev,
+                        [contact.id]: formattedHistory
+                    }));
+                    
+                    console.log('Loaded', formattedHistory.length, 'messages from history');
+                } else {
+                    console.log('No message history found for this contact');
                 }
-            ];
-        });
-        return defaultMessages;
-    });
-
-    // Save messages to localStorage whenever they change
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('clinicianChatMessages', JSON.stringify(messages));
+            } catch (error) {
+                console.error('Error loading message history:', error);
+            }
+            
+            // Subscribe to real-time messages
+            pubnubService.current.subscribeToChannel(channelId, (pubnubMessage: PubNubMessage) => {
+                // Convert PubNub message to our Message format
+                const newMessage: Message = {
+                    id: pubnubMessage.id,
+                    sender: pubnubMessage.sender,
+                    text: pubnubMessage.text,
+                    time: formatTimestamp(pubnubMessage.timestamp),
+                    isMe: pubnubMessage.isMe
+                };
+                
+                // Check if message already exists to prevent duplicates
+                setMessages(prev => {
+                    const existingMessages = prev[contact.id] || [];
+                    const messageExists = existingMessages.some(msg => msg.id === newMessage.id);
+                    
+                    if (messageExists) {
+                        return prev; // Don't add duplicate
+                    }
+                    
+                    return {
+                        ...prev,
+                        [contact.id]: [...existingMessages, newMessage]
+                    };
+                });
+            });
         }
-    }, [messages]);
-
-    // Function to send a message
-    const sendMessage = (contactId: number) => {
-        if (!messageInput.trim()) return;
-
-        const newMessage: Message = {
-            id: Date.now(),
-            sender: 'Me',
-            text: messageInput,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isMe: true
-        };
-
-        setMessages(prev => ({
-            ...prev,
-            [contactId]: [...(prev[contactId] || []), newMessage]
-        }));
-
-        setMessageInput('');
-
-        // Simulate automated reply after 1 second
-        setTimeout(() => {
-            const autoReply: Message = {
-                id: Date.now() + 1,
-                sender: contacts.find(c => c.id === contactId)?.name || 'Contact',
-                text: 'This is an automated message. I hope you are doing great!',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isMe: false
-            };
-
-            setMessages(prev => ({
-                ...prev,
-                [contactId]: [...(prev[contactId] || []), autoReply]
-            }));
-        }, 1000);
     };
 
-    // Function to handle contact selection
-    const handleContactClick = (contact: Contact) => {
-        setSelectedContact(contact);
+    // Function to send a message
+    const sendMessage = async () => {
+        if (!messageInput.trim() || !selectedContact) return;
+
+        setIsLoading(true);
+        const originalInput = messageInput;
+        const messageText = messageInput.trim();
+        
+        try {
+            // Clear input immediately for better UX
+            setMessageInput('');
+            
+            const sentMessage = await pubnubService.current?.sendMessage(
+                pubnubService.current.getChannelName(selectedContact.id),
+                {
+                    sender: 'Me',
+                    text: messageText,
+                    isMe: true,
+                }
+            );
+
+            if (sentMessage) {
+                setMessages(prevMessages => {
+                    const currentMessages = prevMessages[selectedContact.id] || [];
+                    const messageExists = currentMessages.some(msg => msg.id === sentMessage.id);
+                    if (messageExists) {
+                        return prevMessages; // Don't add duplicate
+                    }
+                    
+                    // Convert PubNub message to Message format
+                    const newMessage: Message = {
+                        id: sentMessage.id,
+                        sender: sentMessage.sender,
+                        text: sentMessage.text,
+                        time: formatTimestamp(sentMessage.timestamp),
+                        isMe: true
+                    };
+                    
+                    return {
+                        ...prevMessages,
+                        [selectedContact.id]: [...currentMessages, newMessage]
+                    };
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            // Restore input if sending fails
+            setMessageInput(originalInput);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -181,7 +295,7 @@ export default function MessagesPage() {
                                 <div 
                                     key={contact.id} 
                                     className={`p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer flex items-center transition-colors ${
-                                        selectedContact?.id === contact.id ? 'bg-gray-100' : ''
+                                        selectedContact?.id === contact.id ? 'bg-gray-100 border-l-4 border-l-b' : ''
                                     }`}
                                     onClick={() => handleContactClick(contact)}
                                 >
@@ -207,9 +321,6 @@ export default function MessagesPage() {
                                         <div className="text-xs text-gray-500 mb-1">
                                             {messages[contact.id]?.[messages[contact.id].length - 1]?.time || contact.time}
                                         </div>
-                                        {contact.isStarred && (
-                                            <Star size={16} className="text-yellow-500" fill="currentColor" />
-                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -262,25 +373,27 @@ export default function MessagesPage() {
                                 </div>
                                 
                                 {/* Message Input */}
-                                <div className="p-3 flex items-center border-t border-gray-200">
+                                <div className="p-3 flex items-center border-t border-gray-200 text-b">
                                     <input
                                         type="text"
                                         value={messageInput}
                                         onChange={(e) => setMessageInput(e.target.value)}
                                         onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                sendMessage(selectedContact.id);
+                                            if (e.key === 'Enter' && !isLoading) {
+                                                sendMessage();
                                             }
                                         }}
                                         placeholder="Type a message..."
-                                        className="flex-1 p-3 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                                        className="flex-1 p-3 focus:outline-none focus:border-transparent"
+                                        disabled={isLoading}
                                     />
                                     <button className="ml-2 text-gray-600 hover:text-gray-900 transition-colors">
                                         <Mic size={20} />
                                     </button>
                                     <button 
-                                        onClick={() => sendMessage(selectedContact.id)}
-                                        className="ml-2 bg-b text-white p-3 rounded-full hover:bg-opacity-90 transition-colors"
+                                        onClick={sendMessage}
+                                        disabled={isLoading}
+                                        className="ml-2 bg-b text-white p-3 rounded-full hover:bg-opacity-90 transition-colors disabled:opacity-50"
                                     >
                                         <Send size={18} />
                                     </button>

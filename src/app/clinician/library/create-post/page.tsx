@@ -1,12 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import ClinicianSidebar from '../../sidebar';
+
+// Dynamically import TiptapEditor to avoid SSR issues
+const TiptapEditor = dynamic(() => import('@/components/TiptapEditor'), {
+  ssr: false,
+  loading: () => <div className="w-full h-96 bg-gray-100 rounded-md animate-pulse flex items-center justify-center">Loading editor...</div>
+});
 
 export default function CreatePostPage() {
   const [title, setTitle] = useState('Title goes here');
   const [content, setContent] = useState('');
   const [isTitleEditing, setIsTitleEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleTitleClick = () => {
     setIsTitleEditing(true);
@@ -18,6 +27,44 @@ export default function CreatePostPage() {
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
+  };
+
+  const handleSaveDraft = async () => {
+    setIsSaving(true);
+    try {
+      // Here you would typically save to your backend
+      console.log('Saving draft:', { title, content });
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      alert('Draft saved successfully!');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('Failed to save draft');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!title.trim() || !content.trim()) {
+      alert('Please fill in both title and content before publishing');
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      // Here you would typically publish to your backend
+      console.log('Publishing post:', { title, content });
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      alert('Post published successfully!');
+      // You could redirect to the published post or clear the form
+    } catch (error) {
+      console.error('Error publishing post:', error);
+      alert('Failed to publish post');
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -66,86 +113,12 @@ export default function CreatePostPage() {
               )}
             </div>
 
-            {/* Rich Text Editor Toolbar */}
-            <div className="p-1 border-1 rounded-md border-gray-200">
-              <div className="flex justify-between items-center">
-                {/* Left side - Text formatting */}
-                <div className="flex items-center space-x-4">
-                  {/* Text selection box */}
-                  <select className=" text-gray-900 rounded px-3 py-1 text-sm">
-                    <option>Normal text</option>
-                    <option>Heading 1</option>
-                    <option>Heading 2</option>
-                    <option>Heading 3</option>
-                  </select>
-
-                  {/* Division 1 - Text formatting buttons */}
-                  <div className="flex items-center space-x-1 text-gray-900">
-                    <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Bold">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12h8a4 4 0 100-8H6v8zm0 0h8a4 4 0 110 8H6v-8z" />
-                      </svg>
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Italic">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                      </svg>
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Underline">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                      </svg>
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Strikethrough">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Division 2 - List buttons */} 
-                  <div className="flex items-center space-x-1 text-gray-900">
-                    <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Bullet List">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                      </svg>
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Numbered List">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right side - Additional buttons */}
-                <div className="flex items-center space-x-1 text-gray-900">
-                  <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Link">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Media">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded transition-colors" title="Quote">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Content Text Area */}
-            <div className="py-6 flex-1">
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+            {/* Tiptap Rich Text Editor */}
+            <div className="py-6">
+              <TiptapEditor
+                content={content}
+                onChange={setContent}
                 placeholder="Start writing your post content here..."
-                className="w-full h-96 border-none outline-none resize-none text-gray-900 placeholder-gray-400 focus:ring-0"
               />
             </div>
           </div>
@@ -156,11 +129,19 @@ export default function CreatePostPage() {
           <div className="bg-white rounded-xl  h-full   space-y-6">
             {/* Action Buttons */}
             <div className="flex flex-row space-x-3 w-full">
-              <button className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium">
-                Save Draft
+              <button 
+                onClick={handleSaveDraft}
+                disabled={isSaving || isPublishing}
+                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save Draft'}
               </button>
-              <button className="flex-1 bg-a text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors font-medium">
-                Publish
+              <button 
+                onClick={handlePublish}
+                disabled={isSaving || isPublishing}
+                className="flex-1 bg-a text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPublishing ? 'Publishing...' : 'Publish'}
               </button>
             </div>
 

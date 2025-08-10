@@ -118,7 +118,7 @@ export default function CaregiverProfilePage() {
         localStorage.setItem('caregiver_profile', JSON.stringify(newData));
       }
       
-      console.log('Saving profile data:', updatedData);
+    console.log('Saving profile data:', updatedData);
     }
   };
 
@@ -132,7 +132,7 @@ export default function CaregiverProfilePage() {
         localStorage.setItem('caregiver_profile', JSON.stringify(newData));
       }
       
-      console.log('Saving bio:', newBio);
+    console.log('Saving bio:', newBio);
     }
   };
 
