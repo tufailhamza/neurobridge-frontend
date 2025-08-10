@@ -53,7 +53,7 @@ export default function ContentPage() {
           <div className="bg-white rounded-lg shadow-md p-8">
             {/* Render the HTML content */}
             <div 
-              dangerouslySetInnerHTML={{ __html: card.htmlContent }}
+              dangerouslySetInnerHTML={{ __html: card.html_content }}
               className="prose max-w-none"
             />
           </div>
