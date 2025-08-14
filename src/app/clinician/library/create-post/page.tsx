@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import ClinicianSidebar from '../../sidebar';
+import { Collection } from '@/types/Collection';
 
 // Dynamically import TiptapEditor to avoid SSR issues
 const TiptapEditor = dynamic(() => import('@/components/TiptapEditor'), {
@@ -21,12 +22,92 @@ export default function CreatePostPage() {
   const [allowComments, setAllowComments] = useState(true);
   const [tier, setTier] = useState('public');
   const [collection, setCollection] = useState('');
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [isCollectionsDropdownOpen, setIsCollectionsDropdownOpen] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
 
-  // Check authentication on component mount
+  // Function to fetch user collections
+  const fetchUserCollections = async () => {
+    try {
+      setIsLoadingCollections(true);
+      const accessToken = localStorage.getItem('access_token');
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      
+      if (!accessToken || !userInfo.user_id) {
+        console.error('No access token or user info found');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/collections/user/${userInfo.user_id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch collections: ${response.status}`);
+      }
+
+      const collectionsData = await response.json();
+      setCollections(collectionsData);
+    } catch (error) {
+      console.error('Error fetching collections:', error);
+      // Don't show alert for collections fetch error, just log it
+    } finally {
+      setIsLoadingCollections(false);
+    }
+  };
+
+  // Function to create a new collection
+  const createCollection = async (name: string) => {
+    try {
+      const accessToken = localStorage.getItem('access_token');
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      
+      if (!accessToken || !userInfo.user_id) {
+        throw new Error('No access token or user info found');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/collections`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create collection: ${response.statusText}`);
+      }
+
+      const newCollection = await response.json();
+      
+      // Add the new collection to the local state
+      setCollections(prev => [...prev, newCollection]);
+      
+      // Close modal and reset form
+      setIsCreateCollectionModalOpen(false);
+      setNewCollectionName('');
+      
+      // Show success message (you can replace this with a toast notification)
+      alert('Collection created successfully!');
+      
+    } catch (error) {
+      console.error('Error creating collection:', error);
+      alert(`Failed to create collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Check authentication on component mount and fetch collections
   useEffect(() => {
     const accessToken = localStorage.getItem('access_token');
     const userRole = localStorage.getItem('user_role');
@@ -37,7 +118,24 @@ export default function CreatePostPage() {
       return;
     }
 
+    // Fetch user collections after authentication check
+    fetchUserCollections();
   }, [router]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.collections-dropdown')) {
+        setIsCollectionsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleTitleClick = () => {
     setIsTitleEditing(true);
@@ -294,27 +392,104 @@ export default function CreatePostPage() {
             </div>
 
             {/* Collections */}
-            <div className="space-y-3 border-1 rounded-xl p-3">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">Collections</h3>
-                <p className="text-xs text-gray-500">Help fans explore your work with collections of related posts</p>
-              </div>
-                             <select 
-                 value={collection}
-                 onChange={(e) => setCollection(e.target.value)}
-                 className="w-full text-gray-800 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
-               >
-                 <option value="">Select a collection</option>
-                 <option value="autism-resources">Autism Resources</option>
-                 <option value="speech-development">Speech Development</option>
-                 <option value="behavioral-intervention">Behavioral Intervention</option>
-                 <option value="occupational-therapy">Occupational Therapy</option>
-                 <option value="sensory-processing">Sensory Processing</option>
-                 <option value="communication-tools">Communication Tools</option>
-                 <option value="parenting-tips">Parenting Tips</option>
-                 <option value="physical-therapy">Physical Therapy</option>
-               </select>
-            </div>
+             <div className="space-y-3 border-1 rounded-xl p-3">
+               <div>
+                 <h3 className="text-sm font-semibold text-gray-900">Collections</h3>
+                 <p className="text-xs text-gray-500">Help fans explore your work with collections of related posts</p>
+               </div>
+               
+               {/* Custom Collections Dropdown */}
+               <div className="relative collections-dropdown">
+                 <button
+                   type="button"
+                   onClick={() => setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen)}
+                   className="w-full px-3 py-2 text-left border text-black border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent bg-white"
+                 >
+                   {collection || 'Select a collection'}
+                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                     </svg>
+                   </span>
+                 </button>
+                 
+                 {/* Dropdown Content */}
+                 {isCollectionsDropdownOpen && (
+                   <div className="absolute z-10 w-full mt-1 rounded-b-xl bg-white border text-black border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                     {isLoadingCollections ? (
+                       <div className="px-3 py-2 text-sm text-gray-500 text-center">Loading collections...</div>
+                     ) : collections.length > 0 ? (
+                       <>
+                         {collections.map((col) => (
+                           <div key={col.collection_id} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                             <input
+                               type="radio"
+                               name="collection"
+                               id={`collection-${col.collection_id}`}
+                               value={col.name}
+                               checked={collection === col.name}
+                               onChange={(e) => {
+                                 setCollection(e.target.value);
+                                 setIsCollectionsDropdownOpen(false);
+                               }}
+                               className="mr-3"
+                             />
+                             <label 
+                               htmlFor={`collection-${col.collection_id}`}
+                               className="text-sm text-gray-700 cursor-pointer flex-1"
+                             >
+                               {col.name}
+                             </label>
+                           </div>
+                         ))}
+                         <div className="border-t border-gray-200">
+                           <button
+                             type="button"
+                             onClick={() => {
+                               setIsCollectionsDropdownOpen(false);
+                               setIsCreateCollectionModalOpen(true);
+                             }}
+                             className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left"
+                           >
+                             + Create new collection
+                           </button>
+                         </div>
+                       </>
+                     ) : (
+                       <div className="px-3 py-2 text-sm text-black text-center">
+                         No collections found
+                         <div className="mt-1">
+                           <button
+                             type="button"
+                             onClick={() => {
+                               setIsCollectionsDropdownOpen(false);
+                               setIsCreateCollectionModalOpen(true);
+                             }}
+                             className="text-b rounded-full py-1 px-4 w-full border-1 border-b my-2 font-bold"
+                           >
+                             +   Create your first collection
+                           </button>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+               </div>
+               
+               {/* Selected Collection Display */}
+               {collection && (
+                 <div className="flex items-center justify-between p-2 bg-blue-50 rounded-md">
+                   <span className="text-sm text-blue-800">Selected: {collection}</span>
+                   <button
+                     type="button"
+                     onClick={() => setCollection('')}
+                     className="text-blue-600 hover:text-blue-700 text-sm"
+                   >
+                     Clear
+                   </button>
+                 </div>
+               )}
+             </div>
 
                          {/* Tags */}
              <div className="space-y-3 border-1 rounded-xl p-3">
@@ -361,6 +536,65 @@ export default function CreatePostPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Collection Modal */}
+      {isCreateCollectionModalOpen && (
+        <div className="fixed inset-0 bg-black/20 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-md">
+            {/* Header Row */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Create collection</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreateCollectionModalOpen(false);
+                  setNewCollectionName('');
+                }}
+                className="text-gray-900 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-gray-900 mb-4">
+              Once a collection is created, you can begin to add items to it
+            </p>
+
+            {/* Input Box with Arrow */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                placeholder="Collection name"
+                className="flex-1 px-3 py-2 border text-gray-900 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && newCollectionName.trim()) {
+                    createCollection(newCollectionName.trim());
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newCollectionName.trim()) {
+                    createCollection(newCollectionName.trim());
+                  }
+                }}
+                disabled={!newCollectionName.trim()}
+                className="px-3 py-2 bg-b text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
