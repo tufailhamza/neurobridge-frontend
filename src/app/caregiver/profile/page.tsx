@@ -17,6 +17,32 @@ export default function CaregiverProfilePage() {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [contentPreferences, setContentPreferences] = useState<string[]>([]);
   const [caregiverData, setCaregiverData] = useState<Caregiver | null>(null);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+
+  // Get all localStorage data for debugging
+  const getAllLocalStorageData = () => {
+    if (typeof window === 'undefined') return {};
+    
+    const data: { [key: string]: any } = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        try {
+          const value = localStorage.getItem(key);
+          if (value) {
+            try {
+              data[key] = JSON.parse(value);
+            } catch {
+              data[key] = value;
+            }
+          }
+        } catch (e) {
+          data[key] = 'Error reading value';
+        }
+      }
+    }
+    return data;
+  };
 
   // Get caregiver data from localStorage or create default
   const getCaregiverData = (): Caregiver => {
@@ -38,16 +64,18 @@ export default function CaregiverProfilePage() {
     const userInfo = localStorage.getItem('user_info');
     const signupGeneral = localStorage.getItem('signup_general');
     const signupPersonal = localStorage.getItem('signup_personal');
+    const signupBasic = localStorage.getItem('signup_basic');
     
     if (userInfo && signupGeneral) {
       const user = JSON.parse(userInfo);
       const general = JSON.parse(signupGeneral);
       const personal = signupPersonal ? JSON.parse(signupPersonal) : {};
+      const basic = signupBasic ? JSON.parse(signupBasic) : {};
       
       return {
-        firstName: general.firstName || user.name?.split(' ')[0] || '',
-        lastName: general.lastName || user.name?.split(' ')[1] || '',
-        username: user.email?.split('@')[0] || '',
+        firstName: general.firstName || user.name?.split(' ')[0] || user.first_name || '',
+        lastName: general.lastName || user.name?.split(' ')[1] || user.last_name || '',
+        username: user.email?.split('@')[0] || basic.email?.split('@')[0] || '',
         country: general.country || '',
         city: general.city || '',
         state: general.state || '',
@@ -194,6 +222,8 @@ export default function CaregiverProfilePage() {
     return <div>Loading...</div>;
   }
 
+  const localStorageData = getAllLocalStorageData();
+
   return (
     <div className="h-screen bg-d">
       {/* Sidebar */}
@@ -205,6 +235,33 @@ export default function CaregiverProfilePage() {
         {/* Column B - Main Content */}
         <div className="w-4/5 p-6">
           <div className="bg-white overflow-hidden">
+            
+            {/* Debug Toggle Button */}
+            <div className="p-4 border-b">
+              <button 
+                onClick={() => setShowDebugInfo(!showDebugInfo)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                {showDebugInfo ? 'Hide' : 'Show'} LocalStorage Debug Info
+              </button>
+            </div>
+
+            {/* Debug Information */}
+            {showDebugInfo && (
+              <div className="p-4 bg-gray-50 border-b">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">LocalStorage Contents:</h3>
+                <div className="space-y-2">
+                  {Object.entries(localStorageData).map(([key, value]) => (
+                    <div key={key} className="bg-white p-3 rounded border">
+                      <strong className="text-blue-600">{key}:</strong>
+                      <pre className="text-sm text-gray-700 mt-1 overflow-x-auto">
+                        {JSON.stringify(value, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Cover Image Section */}
             <div className="relative h-64">
@@ -289,6 +346,9 @@ export default function CaregiverProfilePage() {
                   {caregiverData.diagnosis && caregiverData.diagnosis !== 'Not specified' && (
                     <p className="text-gray-500 text-sm">Diagnosis: {caregiverData.diagnosis}</p>
                   )}
+                  {caregiverData.yearsOfDiagnosis > 0 && (
+                    <p className="text-gray-500 text-sm">Years of Diagnosis: {caregiverData.yearsOfDiagnosis}</p>
+                  )}
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(true)}
@@ -317,6 +377,16 @@ export default function CaregiverProfilePage() {
                   <p className="text-black">
                     {caregiverData.bio || "Tell us about yourself..."}
                   </p>
+                </div>
+              </div>
+
+              {/* Raw Data Display */}
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold text-b mb-4">Raw Profile Data (from localStorage)</h2>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <pre className="text-sm text-gray-700 overflow-x-auto">
+                    {JSON.stringify(caregiverData, null, 2)}
+                  </pre>
                 </div>
               </div>
             </div>

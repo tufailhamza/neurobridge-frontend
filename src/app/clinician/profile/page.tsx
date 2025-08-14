@@ -1,21 +1,111 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CaregiverSidebar from '../sidebar';
-import { mockCaregiver } from '@/data/mockCaregiver';
-import EditProfileModal from '@/components/EditProfileModal';
+import EditClinicianProfileModal from '@/components/EditClinicianProfileModal';
 import EditBioModal from '@/components/EditBioModal';
 import ImageUpload from '@/components/ImageUpload';
 import ContentPreferences from '@/components/ContentPreferences';
 import ContentPreferencesModal from '@/components/ContentPreferencesModal';
 
-export default function CaregiverProfilePage() {
+const BACKEND_URL = 'http://localhost:8000';
+
+interface ClinicianProfile {
+  user_id: number;
+  email: string;
+  role: string;
+  account_create_date: string;
+  last_active_at: string | null;
+  last_engagement_at: string | null;
+  created_at: string;
+  updated_at: string;
+  stripe_customer_id: string | null;
+  profile_type: string;
+  specialty: string;
+  profile_image: string | null;
+  is_subscribed: boolean;
+  prefix: string;
+  first_name: string;
+  last_name: string;
+  country: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  clinician_type: string;
+  license_number: string;
+  area_of_expertise: string;
+  content_preferences_tags: string[];
+}
+
+// Helper function to convert ClinicianProfile to Caregiver format for the modal
+const convertToCaregiverFormat = (clinician: ClinicianProfile) => {
+  return {
+    firstName: clinician.first_name,
+    lastName: clinician.last_name,
+    username: clinician.email,
+    country: clinician.country,
+    city: clinician.city,
+    state: clinician.state,
+    zipCode: clinician.zip_code,
+    caregiverRole: clinician.clinician_type,
+    childsAge: 0,
+    diagnosis: clinician.specialty,
+    yearsOfDiagnosis: 0,
+    makeNamePublic: true,
+    makePersonalDetailsPublic: true,
+    profileImage: clinician.profile_image,
+    coverImage: null,
+    contentPreferencesTags: clinician.content_preferences_tags || [],
+    bio: clinician.area_of_expertise || '',
+    subscribedCliniciansIds: [],
+    purchasedFeedContentIds: []
+  };
+};
+
+export default function ClinicianProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBioModalOpen, setIsBioModalOpen] = useState(false);
   const [isContentPreferencesModalOpen, setIsContentPreferencesModalOpen] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(mockCaregiver.profileImage);
-  const [coverImage, setCoverImage] = useState<string | null>(mockCaregiver.coverImage);
-  const [contentPreferences, setContentPreferences] = useState<string[]>(mockCaregiver.contentPreferencesTags);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [contentPreferences, setContentPreferences] = useState<string[]>([]);
+  const [clinicianData, setClinicianData] = useState<ClinicianProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const userInfo = localStorage.getItem('user_info');
+        const userId = JSON.parse(userInfo || '{}').user_id;
+        if (!userId) {
+          console.error('No user ID found in localStorage');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+          headers: {
+            'accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setClinicianData(data);
+          setProfileImage(data.profile_image);
+          setContentPreferences(data.content_preferences_tags || []);
+        } else {
+          console.error('Failed to fetch profile');
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleSave = (updatedData: any) => {
     // Here you would typically save to backend
@@ -50,6 +140,22 @@ export default function CaregiverProfilePage() {
     // Here you would typically save to backend
     console.log('Saving content preferences:', newPreferences);
   };
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-d flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!clinicianData) {
+    return (
+      <div className="h-screen bg-d flex items-center justify-center">
+        <div className="text-xl">Failed to load profile</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-d">
@@ -110,7 +216,7 @@ export default function CaregiverProfilePage() {
                   <div 
                     className={`w-32 h-32 rounded-full border-4 border-white shadow-lg bg-b flex items-center justify-center text-white text-3xl font-bold ${profileImage ? 'hidden' : 'flex'}`}
                   >
-                    {mockCaregiver.firstName.charAt(0)}{mockCaregiver.lastName.charAt(0)}
+                    {clinicianData.first_name.charAt(0)}{clinicianData.last_name.charAt(0)}
                   </div>
                   
                   {/* Edit Icon for Profile */}
@@ -134,9 +240,10 @@ export default function CaregiverProfilePage() {
               {/* Name and Edit Row */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-b">{mockCaregiver.firstName} {mockCaregiver.lastName}</h1>
-                  <p className="text-gray-600 text-lg">@{mockCaregiver.username}</p>
-                  <p className="text-gray-500">{mockCaregiver.city}, {mockCaregiver.state}</p>
+                  <h1 className="text-3xl font-bold text-b">{clinicianData.prefix} {clinicianData.first_name} {clinicianData.last_name}</h1>
+                  <p className="text-gray-600 text-lg">{clinicianData.email}</p>
+                  <p className="text-gray-500">{clinicianData.city}, {clinicianData.state}</p>
+                  <p className="text-gray-500">{clinicianData.clinician_type} - {clinicianData.specialty}</p>
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(true)}
@@ -163,7 +270,7 @@ export default function CaregiverProfilePage() {
                 </div>
                 <div className="bg-gray-50 rounded-lg ">
                   <p className="text-black">
-                    {mockCaregiver.bio || "Tell us about yourself..."}
+                    {clinicianData.area_of_expertise || "Tell us about your expertise..."}
                   </p>
                 </div>
               </div>
@@ -183,7 +290,7 @@ export default function CaregiverProfilePage() {
                 </div>
                 <div className="bg-gray-50 rounded-lg ">
                   <p className="text-black">
-                    {"Tell us about yourself..."}
+                    {"Tell us about your approach..."}
                   </p>
                 </div>
               </div>
@@ -227,7 +334,7 @@ export default function CaregiverProfilePage() {
                   </svg>
                 </div>
                 <div className="text-sm text-gray-500">
-                  Click edit to manage your areas of expertise
+                  {clinicianData.area_of_expertise || "Click edit to manage your areas of expertise"}
                 </div>
               </div>
 
@@ -262,10 +369,10 @@ export default function CaregiverProfilePage() {
       </div>
 
       {/* Profile Edit Modal */}
-      <EditProfileModal
+      <EditClinicianProfileModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        caregiver={mockCaregiver}
+        clinician={clinicianData}
         onSave={handleSave}
       />
 
@@ -273,7 +380,7 @@ export default function CaregiverProfilePage() {
       <EditBioModal
         isOpen={isBioModalOpen}
         onClose={() => setIsBioModalOpen(false)}
-        currentBio={mockCaregiver.bio}
+        currentBio={clinicianData.area_of_expertise}
         onSave={handleBioSave}
       />
 

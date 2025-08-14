@@ -11,11 +11,52 @@ interface EditBioModalProps {
 
 export default function EditBioModal({ isOpen, onClose, currentBio, onSave }: EditBioModalProps) {
   const [bioText, setBioText] = useState(currentBio);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const maxLength = 1000;
 
-  const handleSave = () => {
-    onSave(bioText);
-    onClose();
+  const handleSave = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const userInfo = localStorage.getItem('user_info');
+      const userId = JSON.parse(userInfo || '{}').user_id;
+      
+      if (!userId) {
+        throw new Error('No user ID found in localStorage');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify({
+          bio: bioText
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update bio');
+      }
+
+      const result = await response.json();
+      console.log('Bio updated successfully:', result);
+      
+      // Call the onSave callback with the updated bio
+      onSave(bioText);
+      onClose();
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while updating the bio';
+      setError(errorMessage);
+      console.error('Error updating bio:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -29,6 +70,7 @@ export default function EditBioModal({ isOpen, onClose, currentBio, onSave }: Ed
           <button 
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+            disabled={isLoading}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -38,6 +80,13 @@ export default function EditBioModal({ isOpen, onClose, currentBio, onSave }: Ed
 
         {/* Modal Content */}
         <div className="p-8 space-y-6 text-gray-800">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tell us about yourself
@@ -49,6 +98,7 @@ export default function EditBioModal({ isOpen, onClose, currentBio, onSave }: Ed
               rows={8}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent resize-none"
               placeholder="Share your story, experiences, and what brings you here..."
+              disabled={isLoading}
             />
             <div className="flex justify-between items-center mt-2">
               <div className="text-sm text-gray-500">
@@ -62,9 +112,10 @@ export default function EditBioModal({ isOpen, onClose, currentBio, onSave }: Ed
         <div className="flex justify-end p-6">
           <button
             onClick={handleSave}
-            className="bg-a text-white px-6 py-2 rounded-lg font-medium hover:bg-opacity-90 transition-colors"
+            className="bg-a text-white px-6 py-2 rounded-lg font-medium hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
           >
-            Save
+            {isLoading ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
