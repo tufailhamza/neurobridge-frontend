@@ -7,7 +7,38 @@ import EditBioModal from '@/components/EditBioModal';
 import ImageUpload from '@/components/ImageUpload';
 import ContentPreferences from '@/components/ContentPreferences';
 import ContentPreferencesModal from '@/components/ContentPreferencesModal';
-import { Caregiver } from '@/types/Caregiver';
+
+interface CaregiverProfile {
+  user_id: number;
+  email: string;
+  role: string;
+  account_create_date: string;
+  last_active_at: string | null;
+  last_engagement_at: string | null;
+  created_at: string;
+  updated_at: string;
+  stripe_customer_id: string | null;
+  profile_type: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  country: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  caregiver_role: string;
+  childs_age: number;
+  diagnosis: string;
+  years_of_diagnosis: number;
+  make_name_public: boolean;
+  make_personal_details_public: boolean;
+  profile_image: string | null;
+  cover_image: string | null;
+  content_preferences_tags: string[];
+  bio: string;
+  subscribed_clinicians_ids: string[];
+  purchased_feed_content_ids: string[];
+}
 
 export default function CaregiverProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,185 +47,69 @@ export default function CaregiverProfilePage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [contentPreferences, setContentPreferences] = useState<string[]>([]);
-  const [caregiverData, setCaregiverData] = useState<Caregiver | null>(null);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
-
-  // Get all localStorage data for debugging
-  const getAllLocalStorageData = () => {
-    if (typeof window === 'undefined') return {};
-    
-    const data: { [key: string]: any } = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        try {
-          const value = localStorage.getItem(key);
-          if (value) {
-            try {
-              data[key] = JSON.parse(value);
-            } catch {
-              data[key] = value;
-            }
-          }
-        } catch (e) {
-          data[key] = 'Error reading value';
-        }
-      }
-    }
-    return data;
-  };
-
-  // Get caregiver data from localStorage or create default
-  const getCaregiverData = (): Caregiver => {
-    if (typeof window === 'undefined') {
-      return getDefaultCaregiverData();
-    }
-
-    // First check if we have existing profile data
-    const existingProfile = localStorage.getItem('caregiver_profile');
-    if (existingProfile) {
-      try {
-        return JSON.parse(existingProfile);
-      } catch (e) {
-        console.error('Error parsing existing profile:', e);
-      }
-    }
-
-    // Try to get from signup localStorage data
-    const userInfo = localStorage.getItem('user_info');
-    const signupGeneral = localStorage.getItem('signup_general');
-    const signupPersonal = localStorage.getItem('signup_personal');
-    const signupBasic = localStorage.getItem('signup_basic');
-    
-    if (userInfo && signupGeneral) {
-      const user = JSON.parse(userInfo);
-      const general = JSON.parse(signupGeneral);
-      const personal = signupPersonal ? JSON.parse(signupPersonal) : {};
-      const basic = signupBasic ? JSON.parse(signupBasic) : {};
-      
-      return {
-        firstName: general.firstName || user.name?.split(' ')[0] || user.first_name || '',
-        lastName: general.lastName || user.name?.split(' ')[1] || user.last_name || '',
-        username: user.email?.split('@')[0] || basic.email?.split('@')[0] || '',
-        country: general.country || '',
-        city: general.city || '',
-        state: general.state || '',
-        zipCode: general.zipCode || '',
-        caregiverRole: personal.caregiverRole || '',
-        childsAge: personal.childAge ? parseInt(personal.childAge) : 0,
-        diagnosis: personal.diagnosis || '',
-        yearsOfDiagnosis: personal.yearsOfDiagnosis ? parseInt(personal.yearsOfDiagnosis) : 0,
-        makeNamePublic: true,
-        makePersonalDetailsPublic: false,
-        profileImage: null,
-        coverImage: null,
-        contentPreferencesTags: ['Autism', 'ADHD', 'Parenting Tips'],
-        bio: 'Tell us about yourself...',
-        subscribedCliniciansIds: [],
-        purchasedFeedContentIds: []
-      };
-    }
-    
-    return getDefaultCaregiverData();
-  };
-
-  const getDefaultCaregiverData = (): Caregiver => {
-    return {
-      firstName: 'Caregiver',
-      lastName: 'User',
-      username: 'caregiver',
-      country: 'United States',
-      city: 'City',
-      state: 'State',
-      zipCode: '12345',
-      caregiverRole: 'Parent',
-      childsAge: 0,
-      diagnosis: 'Not specified',
-      yearsOfDiagnosis: 0,
-      makeNamePublic: true,
-      makePersonalDetailsPublic: false,
-      profileImage: null,
-      coverImage: null,
-      contentPreferencesTags: ['Autism', 'ADHD', 'Parenting Tips'],
-      bio: 'Tell us about yourself...',
-      subscribedCliniciansIds: [],
-      purchasedFeedContentIds: []
-    };
-  };
+  const [caregiverData, setCaregiverData] = useState<CaregiverProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const data = getCaregiverData();
-    setCaregiverData(data);
-    setContentPreferences(data.contentPreferencesTags);
-    
-    // Load existing images if they exist
-    if (data.profileImage) {
-      setProfileImage(data.profileImage);
-    }
-    if (data.coverImage) {
-      setCoverImage(data.coverImage);
-    }
+    const fetchProfile = async () => {
+      try {
+        const userInfo = localStorage.getItem('user_info');
+        const userId = JSON.parse(userInfo || '{}').user_id;
+        
+        if (!userId) {
+          throw new Error('No user ID found in localStorage');
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+          headers: {
+            'accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCaregiverData(data);
+          setProfileImage(data.profile_image);
+          setCoverImage(data.cover_image);
+          setContentPreferences(data.content_preferences_tags || []);
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to fetch profile');
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred while fetching the profile';
+        setError(errorMessage);
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
 
-  const handleSave = (updatedData: Partial<Caregiver>) => {
-    if (caregiverData) {
-      const newData = { ...caregiverData, ...updatedData };
-      setCaregiverData(newData);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
-      }
-      
+  const handleSave = (updatedData: any) => {
+    // Here you would typically save to backend
     console.log('Saving profile data:', updatedData);
-    }
   };
 
   const handleBioSave = (newBio: string) => {
-    if (caregiverData) {
-      const newData = { ...caregiverData, bio: newBio };
-      setCaregiverData(newData);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
-      }
-      
+    // Here you would typically save to backend
     console.log('Saving bio:', newBio);
-    }
   };
 
   const handleProfileImageChange = (file: File) => {
     const imageUrl = URL.createObjectURL(file);
     setProfileImage(imageUrl);
-    
-    if (caregiverData) {
-      const newData = { ...caregiverData, profileImage: imageUrl };
-      setCaregiverData(newData);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
-      }
-    }
-    
+    // Here you would typically upload to backend
     console.log('Uploading profile image:', file);
   };
 
   const handleCoverImageChange = (file: File) => {
     const imageUrl = URL.createObjectURL(file);
     setCoverImage(imageUrl);
-    
-    if (caregiverData) {
-      const newData = { ...caregiverData, coverImage: imageUrl };
-      setCaregiverData(newData);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
-      }
-    }
-    
+    // Here you would typically upload to backend
     console.log('Uploading cover image:', file);
   };
 
@@ -204,25 +119,33 @@ export default function CaregiverProfilePage() {
 
   const handleContentPreferencesSave = (newPreferences: string[]) => {
     setContentPreferences(newPreferences);
-    
-    if (caregiverData) {
-      const newData = { ...caregiverData, contentPreferencesTags: newPreferences };
-      setCaregiverData(newData);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('caregiver_profile', JSON.stringify(newData));
-      }
-    }
-    
+    // Here you would typically save to backend
     console.log('Saving content preferences:', newPreferences);
   };
 
-  if (!caregiverData) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen bg-d flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
   }
 
-  const localStorageData = getAllLocalStorageData();
+  if (error) {
+    return (
+      <div className="h-screen bg-d flex items-center justify-center">
+        <div className="text-xl text-red-600">Error: {error}</div>
+      </div>
+    );
+  }
+
+  if (!caregiverData) {
+    return (
+      <div className="h-screen bg-d flex items-center justify-center">
+        <div className="text-xl">Failed to load profile</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-d">
@@ -235,33 +158,6 @@ export default function CaregiverProfilePage() {
         {/* Column B - Main Content */}
         <div className="w-4/5 p-6">
           <div className="bg-white overflow-hidden">
-            
-            {/* Debug Toggle Button */}
-            <div className="p-4 border-b">
-              <button 
-                onClick={() => setShowDebugInfo(!showDebugInfo)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                {showDebugInfo ? 'Hide' : 'Show'} LocalStorage Debug Info
-              </button>
-            </div>
-
-            {/* Debug Information */}
-            {showDebugInfo && (
-              <div className="p-4 bg-gray-50 border-b">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">LocalStorage Contents:</h3>
-                <div className="space-y-2">
-                  {Object.entries(localStorageData).map(([key, value]) => (
-                    <div key={key} className="bg-white p-3 rounded border">
-                      <strong className="text-blue-600">{key}:</strong>
-                      <pre className="text-sm text-gray-700 mt-1 overflow-x-auto">
-                        {JSON.stringify(value, null, 2)}
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             
             {/* Cover Image Section */}
             <div className="relative h-64">
@@ -310,7 +206,7 @@ export default function CaregiverProfilePage() {
                   <div 
                     className={`w-32 h-32 rounded-full border-4 border-white shadow-lg bg-b flex items-center justify-center text-white text-3xl font-bold ${profileImage ? 'hidden' : 'flex'}`}
                   >
-                    {caregiverData.firstName.charAt(0)}{caregiverData.lastName.charAt(0)}
+                    {caregiverData.first_name.charAt(0)}{caregiverData.last_name.charAt(0)}
                   </div>
                   
                   {/* Edit Icon for Profile */}
@@ -320,7 +216,7 @@ export default function CaregiverProfilePage() {
                     className="absolute -top-1 -right-1 z-10"
                   >
                     <button className="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all border border-gray-200 cursor-pointer">
-                      <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
@@ -334,20 +230,20 @@ export default function CaregiverProfilePage() {
               {/* Name and Edit Row */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-b">{caregiverData.firstName} {caregiverData.lastName}</h1>
+                  <h1 className="text-3xl font-bold text-b">{caregiverData.first_name} {caregiverData.last_name}</h1>
                   <p className="text-gray-600 text-lg">@{caregiverData.username}</p>
                   <p className="text-gray-500">{caregiverData.city}, {caregiverData.state}</p>
-                  {caregiverData.caregiverRole && (
-                    <p className="text-gray-500 text-sm mt-1">Role: {caregiverData.caregiverRole}</p>
+                  {caregiverData.caregiver_role && (
+                    <p className="text-gray-500 text-sm mt-1">Role: {caregiverData.caregiver_role}</p>
                   )}
-                  {caregiverData.childsAge > 0 && (
-                    <p className="text-gray-500 text-sm">Child's Age: {caregiverData.childsAge} years</p>
+                  {caregiverData.childs_age > 0 && (
+                    <p className="text-gray-500 text-sm">Child's Age: {caregiverData.childs_age} years</p>
                   )}
                   {caregiverData.diagnosis && caregiverData.diagnosis !== 'Not specified' && (
                     <p className="text-gray-500 text-sm">Diagnosis: {caregiverData.diagnosis}</p>
                   )}
-                  {caregiverData.yearsOfDiagnosis > 0 && (
-                    <p className="text-gray-500 text-sm">Years of Diagnosis: {caregiverData.yearsOfDiagnosis}</p>
+                  {caregiverData.years_of_diagnosis > 0 && (
+                    <p className="text-gray-500 text-sm">Years of Diagnosis: {caregiverData.years_of_diagnosis}</p>
                   )}
                 </div>
                 <button 
@@ -377,16 +273,6 @@ export default function CaregiverProfilePage() {
                   <p className="text-black">
                     {caregiverData.bio || "Tell us about yourself..."}
                   </p>
-                </div>
-              </div>
-
-              {/* Raw Data Display */}
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold text-b mb-4">Raw Profile Data (from localStorage)</h2>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <pre className="text-sm text-gray-700 overflow-x-auto">
-                    {JSON.stringify(caregiverData, null, 2)}
-                  </pre>
                 </div>
               </div>
             </div>

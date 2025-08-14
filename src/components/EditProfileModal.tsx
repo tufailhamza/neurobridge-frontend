@@ -26,6 +26,8 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
     makeNamePublic: caregiver.makeNamePublic,
     makePersonalDetailsPublic: caregiver.makePersonalDetailsPublic
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
     setFormData(prev => ({
@@ -34,31 +36,93 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
     }));
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    onClose();
+  const handleSave = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const userInfo = localStorage.getItem('user_info');
+      const userId = JSON.parse(userInfo || '{}').user_id;
+      
+      if (!userId) {
+        throw new Error('No user ID found in localStorage');
+      }
+
+      // Convert form data to backend format (snake_case)
+      const backendData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        username: formData.username,
+        country: formData.country,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+        caregiver_role: formData.caregiverRole,
+        childs_age: formData.childsAge,
+        diagnosis: formData.diagnosis,
+        years_of_diagnosis: formData.yearsOfDiagnosis,
+        make_name_public: formData.makeNamePublic,
+        make_personal_details_public: formData.makePersonalDetailsPublic
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify(backendData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update profile');
+      }
+
+      const result = await response.json();
+      console.log('Profile updated successfully:', result);
+      
+      // Call the onSave callback with the updated data
+      onSave(formData);
+      onClose();
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while updating the profile';
+      setError(errorMessage);
+      console.error('Error updating profile:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/25 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
         {/* Modal Header */}
         <div className="flex justify-between items-center pl-8 pr-4 py-8">
-            <h2 className="text-2xl font-semibold text-b">Profile</h2>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+          <h2 className="text-2xl font-semibold text-b">Profile</h2>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+            disabled={isLoading}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Modal Content */}
         <div className="p-8 space-y-6 text-gray-800">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
           {/* General Information Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
@@ -70,6 +134,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     formData.makeNamePublic ? 'bg-b' : 'bg-gray-200'
                   }`}
+                  disabled={isLoading}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                     formData.makeNamePublic ? 'translate-x-6' : 'translate-x-1'
@@ -87,6 +152,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Enter first name"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -97,6 +163,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Enter last name"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -109,6 +176,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                 placeholder="Enter username"
+                disabled={isLoading}
               />
             </div>
 
@@ -118,6 +186,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                 value={formData.country}
                 onChange={(e) => handleInputChange('country', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                disabled={isLoading}
               >
                 <option value="">Select country</option>
                 <option value="United States">United States</option>
@@ -163,6 +232,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Enter city"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -171,6 +241,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   value={formData.state}
                   onChange={(e) => handleInputChange('state', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                  disabled={isLoading}
                 >
                   <option value="">Select state</option>
                   <option value="Alabama">Alabama</option>
@@ -233,6 +304,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   onChange={(e) => handleInputChange('zipCode', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Enter zip code"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -249,6 +321,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     formData.makePersonalDetailsPublic ? 'bg-b' : 'bg-gray-200'
                   }`}
+                  disabled={isLoading}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                     formData.makePersonalDetailsPublic ? 'translate-x-6' : 'translate-x-1'
@@ -264,6 +337,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   value={formData.caregiverRole}
                   onChange={(e) => handleInputChange('caregiverRole', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                  disabled={isLoading}
                 >
                   <option value="">Select caregiver role</option>
                   <option value="Parent">Parent</option>
@@ -290,6 +364,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   placeholder="Enter age"
                   min="0"
                   max="25"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -301,6 +376,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   value={formData.diagnosis}
                   onChange={(e) => handleInputChange('diagnosis', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                  disabled={isLoading}
                 >
                   <option value="">Select diagnosis</option>
                   <option value="Autism Spectrum Disorder">Autism Spectrum Disorder</option>
@@ -337,6 +413,7 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
                   placeholder="Enter years"
                   min="0"
                   max="25"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -347,9 +424,10 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
         <div className="flex justify-end p-6">
           <button
             onClick={handleSave}
-            className="bg-a text-white px-6 py-2 rounded-lg font-medium hover:bg-opacity-90 transition-colors"
+            className="bg-a text-white px-6 py-2 rounded-lg font-medium hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
           >
-            Save
+            {isLoading ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
