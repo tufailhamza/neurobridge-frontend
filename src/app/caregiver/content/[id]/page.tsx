@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import CaregiverSidebar from '../../sidebar';
-import { feedCards } from '@/data/feedCards';
 import { FeedCard } from '@/types/FeedCard';
+import { env } from '@/config/env';
 
 export default function ContentPage() {
   const params = useParams();
@@ -12,10 +12,32 @@ export default function ContentPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const cardId = params.id as string;
-    const foundCard = feedCards.find(c => c.id === cardId);
-    setCard(foundCard || null);
-    setLoading(false);
+    if (params.id) {
+      const cardId = params.id as string;
+      console.log('Looking for card with ID:', cardId);
+      
+      // Fetch the specific post from the API
+      const fetchPost = async () => {
+        try {
+          const response = await fetch(`${env.BACKEND_URL}/posts/${cardId}`);
+          if (response.ok) {
+            const postData = await response.json();
+            console.log('Found post from API:', postData);
+            setCard(postData);
+          } else {
+            console.log('Post not found in API');
+            setCard(null);
+          }
+        } catch (error) {
+          console.error('Error fetching post:', error);
+          setCard(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchPost();
+    }
   }, [params.id]);
 
   if (loading) {
@@ -50,12 +72,18 @@ export default function ContentPage() {
         
         {/* Column B - Content */}
         <div className="w-4/5 p-6">
-          <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="bg-white rounded-lg shadow-md p-8">            
             {/* Render the HTML content */}
-            <div 
-              dangerouslySetInnerHTML={{ __html: card.html_content }}
-              className="prose max-w-none"
-            />
+            {card.html_content ? (
+              <div 
+                dangerouslySetInnerHTML={{ __html: card.html_content }}
+                className="content-html max-w-none text-gray-900"
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-900 text-lg">No content available</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -68,7 +96,7 @@ export default function ContentPage() {
               <h3 className="text-lg font-semibold text-b mb-4">Purchase</h3>
               <div className="text-center">
                 <button className="w-full bg-a text-white py-3 px-6 rounded-lg font-medium hover:bg-opacity-90 transition-colors">
-                ${card.price}
+                  {card.price === 0 ? 'Free' : `$${card.price}`}
                 </button>
               </div>
             </div>

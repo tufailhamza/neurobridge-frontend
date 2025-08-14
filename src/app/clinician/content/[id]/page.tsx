@@ -12,6 +12,7 @@ export default function ContentPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('card', params);
     const cardId = params.id as string;
     const foundCard = feedCards.find(c => c.id === cardId);
     setCard(foundCard || null);
