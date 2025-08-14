@@ -2,7 +2,7 @@
     "folder-color.pathColors": [
         {
             "folderPath": "frontend\\src\\app\\clinician\\",
-            "color": "foldercolorizer.color_660033",
+            "color": "foldercolorizer.color_ffcc33",
             "badge": "👺"
         },
         {
@@ -12,7 +12,7 @@
         },
         {
             "folderPath": "frontend\\src\\app\\caregiver\\",
-            "color": "foldercolorizer.color_ff00ff",
+            "color": "foldercolorizer.color_33cc00",
             "badge": "😲"
         },
         {
