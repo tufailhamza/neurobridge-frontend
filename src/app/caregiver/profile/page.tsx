@@ -40,6 +40,31 @@ interface CaregiverProfile {
   purchased_feed_content_ids: string[];
 }
 
+// Helper function to convert CaregiverProfile to Caregiver format for the modal
+const convertToCaregiverFormat = (caregiver: CaregiverProfile) => {
+  return {
+    firstName: caregiver.first_name,
+    lastName: caregiver.last_name,
+    username: caregiver.username,
+    country: caregiver.country,
+    city: caregiver.city,
+    state: caregiver.state,
+    zipCode: caregiver.zip_code,
+    caregiverRole: caregiver.caregiver_role,
+    childsAge: caregiver.childs_age,
+    diagnosis: caregiver.diagnosis,
+    yearsOfDiagnosis: caregiver.years_of_diagnosis,
+    makeNamePublic: caregiver.make_name_public,
+    makePersonalDetailsPublic: caregiver.make_personal_details_public,
+    profileImage: caregiver.profile_image,
+    coverImage: caregiver.cover_image,
+    contentPreferencesTags: caregiver.content_preferences_tags || [],
+    bio: caregiver.bio || '',
+    subscribedCliniciansIds: caregiver.subscribed_clinicians_ids || [],
+    purchasedFeedContentIds: caregiver.purchased_feed_content_ids || []
+  };
+};
+
 export default function CaregiverProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBioModalOpen, setIsBioModalOpen] = useState(false);
@@ -56,7 +81,9 @@ export default function CaregiverProfilePage() {
       try {
         const userInfo = localStorage.getItem('user_info');
         const userId = JSON.parse(userInfo || '{}').user_id;
-        
+        const userName = JSON.parse(userInfo || '{}').name;
+        console.log('userName',userName);
+
         if (!userId) {
           throw new Error('No user ID found in localStorage');
         }
@@ -294,7 +321,7 @@ export default function CaregiverProfilePage() {
       <EditProfileModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        caregiver={caregiverData}
+        caregiver={convertToCaregiverFormat(caregiverData)}
         onSave={handleSave}
       />
 

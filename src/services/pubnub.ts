@@ -21,13 +21,19 @@ export interface PubNubMessage {
     sender: string;
     text: string;
     timestamp: number;
-    isMe: boolean;
+    senderId?: string;
+    receiverId?: string;
+    senderName?: string;
+    receiverName?: string;
 }
 
 interface PubNubPayload {
     sender: string;
     text: string;
-    isMe: boolean;
+    senderId?: string;
+    receiverId?: string;
+    senderName?: string;
+    receiverName?: string;
 }
 
 export class PubNubService {
@@ -59,7 +65,10 @@ export class PubNubService {
                     sender: payload.sender,
                     text: payload.text,
                     timestamp: Number(message.timetoken),
-                    isMe: payload.isMe,
+                    senderId: payload.senderId,
+                    receiverId: payload.receiverId,
+                    senderName: payload.senderName,
+                    receiverName: payload.receiverName,
                 };
                 
                 // Find which channel this message belongs to
@@ -113,7 +122,7 @@ export class PubNubService {
     }
 
     // Send a message to a channel
-    async sendMessage(channelId: string, message: Omit<PubNubMessage, 'id' | 'timestamp'>) {
+    async sendMessage(channelId: string, message: Omit<PubNubMessage, 'id' | 'timestamp'>): Promise<PubNubMessage> {
         try {
             // Validate that we have proper keys
             if (!env.PUBNUB_PUBLISH_KEY || !env.PUBNUB_SUBSCRIBE_KEY || !env.PUBNUB_SECRET_KEY) {
@@ -138,8 +147,11 @@ export class PubNubService {
                 message: {
                     sender: message.sender,
                     text: message.text,
-                    isMe: message.isMe,
-                },
+                    senderId: message.senderId || '',
+                    receiverId: message.receiverId || '',
+                    senderName: message.senderName || '',
+                    receiverName: message.receiverName || '',
+                } as any, // Type assertion to avoid PubNub type conflicts
             });
 
             console.log('Message sent successfully:', result);
@@ -148,7 +160,7 @@ export class PubNubService {
             return {
                 ...message,
                 id: result.timetoken.toString(),
-                timestamp: result.timetoken,
+                timestamp: Number(result.timetoken),
             };
         } catch (error: any) {
             console.error('Error sending message:', error);
@@ -199,7 +211,10 @@ export class PubNubService {
                     sender: payload.sender,
                     text: payload.text,
                     timestamp: Number(msg.timetoken),
-                    isMe: payload.isMe
+                    senderId: payload.senderId,
+                    receiverId: payload.receiverId,
+                    senderName: payload.senderName,
+                    receiverName: payload.receiverName,
                 };
             });
         } catch (error: any) {
