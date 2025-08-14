@@ -12,10 +12,12 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [drafts, setDrafts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const postsPerPage = 200;
 
   const tabs = [
@@ -24,6 +26,23 @@ export default function LibraryPage() {
     { id: 'draft', label: 'Draft' },
     { id: 'collections', label: 'Collections' }
   ];
+
+  // Load drafts from localStorage
+  const loadDrafts = () => {
+    try {
+      const userInfo = localStorage.getItem('user_info');
+      if (userInfo) {
+        const user = JSON.parse(userInfo);
+        const storedDrafts = JSON.parse(localStorage.getItem('clinician_drafts') || '[]');
+        // Filter drafts for current user
+        const userDrafts = storedDrafts.filter((draft: any) => draft.user_id === user.user_id);
+        setDrafts(userDrafts);
+      }
+    } catch (error) {
+      console.error('Error loading drafts:', error);
+      setDrafts([]);
+    }
+  };
 
   // Fetch posts from backend API
   useEffect(() => {
@@ -75,6 +94,7 @@ export default function LibraryPage() {
     };
 
     fetchUserPosts();
+    loadDrafts(); // Load drafts when component mounts
   }, [currentPage]);
 
   // Auto-refresh posts when user returns to the page (useful after creating posts)
@@ -89,6 +109,41 @@ export default function LibraryPage() {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [loading, posts.length]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.actions-dropdown')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Function to refresh drafts
+  const refreshDrafts = () => {
+    loadDrafts();
+  };
+
+  // Function to delete a draft
+  const deleteDraft = (draftId: number) => {
+    try {
+      const storedDrafts = JSON.parse(localStorage.getItem('clinician_drafts') || '[]');
+      const updatedDrafts = storedDrafts.filter((draft: any) => draft.id !== draftId);
+      localStorage.setItem('clinician_drafts', JSON.stringify(updatedDrafts));
+      loadDrafts(); // Refresh the drafts list
+      setSuccessMessage('Draft deleted successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      setError('Failed to delete draft');
+    }
+  };
 
   // Function to refresh posts (useful after creating new posts)
   const refreshPosts = async () => {
@@ -131,6 +186,7 @@ export default function LibraryPage() {
 
       const data = await response.json();
       setPosts(data || []);
+      loadDrafts(); // Also refresh drafts
       setSuccessMessage('Posts refreshed successfully!');
       setTimeout(() => setSuccessMessage(null), 5000); // Clear message after 5 seconds
     } catch (err) {
@@ -141,15 +197,20 @@ export default function LibraryPage() {
     }
   };
 
-  // Filter posts based on search query
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (post.collection && post.collection.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filter posts or drafts based on active tab and search query
+  const getFilteredItems = () => {
+    let items = activeTab === 'draft' ? drafts : posts;
+    return items.filter(item =>
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.collection && item.collection.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  };
+
+  const filteredItems = getFilteredItems();
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
-  const currentPosts = filteredPosts.slice(0, postsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / postsPerPage);
+  const currentItems = filteredItems.slice(0, postsPerPage);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -214,7 +275,7 @@ export default function LibraryPage() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search posts..."
+                    placeholder={activeTab === 'draft' ? 'Search drafts...' : 'Search posts...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full text-gray-900 pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -234,10 +295,21 @@ export default function LibraryPage() {
                   </svg>
                 </div>
               </div>
-              {!loading && posts.length > 0 && (
+              {!loading && (activeTab === 'draft' ? drafts.length > 0 : posts.length > 0) && (
                 <span className="text-sm text-gray-500">
-                  {filteredPosts.length} post{filteredPosts.length !== 1 ? 's' : ''} found
+                  {filteredItems.length} {activeTab === 'draft' ? 'draft' : 'post'}{filteredItems.length !== 1 ? 's' : ''} found
                 </span>
+              )}
+              {activeTab === 'draft' && (
+                <button
+                  onClick={refreshDrafts}
+                  className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Refresh</span>
+                </button>
               )}
             </div>
 
@@ -268,24 +340,24 @@ export default function LibraryPage() {
                   Retry
                 </button>
               </div>
-            ) : filteredPosts.length === 0 ? (
+            ) : filteredItems.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-600">
-                  {searchQuery ? 'No posts found matching your search.' : 'No posts found.'}
+                  {searchQuery ? `No ${activeTab === 'draft' ? 'drafts' : 'posts'} found matching your search.` : `No ${activeTab === 'draft' ? 'drafts' : 'posts'} found.`}
                 </p>
                 {!searchQuery && (
                   <button 
                     onClick={() => router.push('/clinician/library/create-post')}
                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Create Your First Post
+                    {activeTab === 'draft' ? 'Create Your First Draft' : 'Create Your First Post'}
                   </button>
                 )}
               </div>
             ) : (
               <>
                 {/* Table */}
-                <div className="overflow-x-auto">
+                <div className="">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
@@ -302,33 +374,78 @@ export default function LibraryPage() {
                           Price
                         </th>
                         <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date Published
+                          {activeTab === 'draft' ? 'Date Created' : 'Date Published'}
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {currentPosts.map((post) => (
-                        <tr key={post.id} className="hover:bg-gray-50">
+                      {currentItems.map((item: any) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
                           <td className="py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{post.title}</div>
+                            <div className="text-sm font-medium text-gray-900">{item.title}</div>
                           </td>
                           <td className="py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">{post.collection || '-'}</div>
+                            <div className="text-sm text-gray-500">{item.collection || '-'}</div>
                           </td>
                           <td className="py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              post.access === 'paid' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {post.access}
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full text-gray-600">
+                              {item.access || item.tier}
                             </span>
                           </td>
                           <td className="py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{formatPrice(post.price)}</div>
+                            <div className="text-sm text-gray-900">{formatPrice(item.price)}</div>
                           </td>
                           <td className="py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">{formatDate(post.date_published)}</div>
+                            <div className="text-sm text-gray-500">
+                              {activeTab === 'draft' 
+                                ? formatDate(item.date_created) 
+                                : formatDate(item.date_published)
+                              }
+                            </div>
+                          </td>
+                          <td className="py-4 whitespace-nowrap">
+                            <div className="relative actions-dropdown">
+                              <button
+                                onClick={() => setOpenDropdown(openDropdown === item.id ? null : item.id)}
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                              >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                </svg>
+                              </button>
+                              
+                              {openDropdown === item.id && (
+                                <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                  {activeTab === 'draft' && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          router.push(`/clinician/library/create-post?draft=${item.id}`);
+                                          setOpenDropdown(null);
+                                        }}
+                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 first:rounded-t-md"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          deleteDraft(item.id);
+                                          setOpenDropdown(null);
+                                        }}
+                                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 last:rounded-b-md"
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  )}
+                                  {activeTab !== 'draft' && (
+                                    <div className="px-4 py-2 text-sm text-gray-500">
+                                      No actions
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

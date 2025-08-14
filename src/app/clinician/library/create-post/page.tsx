@@ -31,6 +31,7 @@ export default function CreatePostPage() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+  const [isEditingDraft, setIsEditingDraft] = useState(false);
 
   // Function to fetch user collections
   const fetchUserCollections = async () => {
@@ -63,6 +64,29 @@ export default function CreatePostPage() {
       // Don't show alert for collections fetch error, just log it
     } finally {
       setIsLoadingCollections(false);
+    }
+  };
+
+  // Function to load a draft for editing
+  const loadDraft = (draftId: number) => {
+    try {
+      const storedDrafts = JSON.parse(localStorage.getItem('clinician_drafts') || '[]');
+      const draft = storedDrafts.find((d: any) => d.id === draftId);
+      
+      if (draft) {
+        setTitle(draft.title);
+        setContent(draft.content);
+        setCoverImageUrl(draft.coverImageUrl || '');
+        setTags(draft.tags || []);
+        setPrice(draft.price || 0);
+        setAllowComments(draft.allowComments !== undefined ? draft.allowComments : true);
+        setTier(draft.tier || 'public');
+        setCollection(draft.collection || '');
+        setAttachments(draft.attachments || []);
+        console.log('Draft loaded:', draft);
+      }
+    } catch (error) {
+      console.error('Error loading draft:', error);
     }
   };
 
@@ -120,6 +144,15 @@ export default function CreatePostPage() {
 
     // Fetch user collections after authentication check
     fetchUserCollections();
+
+    // Check if we're editing a draft
+    const urlParams = new URLSearchParams(window.location.search);
+    const draftId = urlParams.get('draft');
+    
+    if (draftId) {
+      setIsEditingDraft(true);
+      loadDraft(parseInt(draftId));
+    }
   }, [router]);
 
   // Close dropdown when clicking outside
@@ -152,11 +185,62 @@ export default function CreatePostPage() {
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
-      // Here you would typically save to your backend
-      console.log('Saving draft:', { title, content });
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('Draft saved successfully!');
+      // Check if we're editing an existing draft
+      const urlParams = new URLSearchParams(window.location.search);
+      const draftId = urlParams.get('draft');
+      
+      let draft;
+      if (draftId) {
+        // Update existing draft
+        draft = {
+          id: parseInt(draftId),
+          title: title.trim() || 'Untitled Draft',
+          content: content,
+          coverImageUrl,
+          tags,
+          price: tier === 'paid' ? price : 0,
+          allowComments,
+          tier,
+          collection,
+          attachments,
+          date_created: new Date().toISOString(),
+          user_id: JSON.parse(localStorage.getItem('user_info') || '{}').user_id || 0
+        };
+      } else {
+        // Create new draft
+        draft = {
+          id: Date.now(), // Use timestamp as temporary ID
+          title: title.trim() || 'Untitled Draft',
+          content: content,
+          coverImageUrl,
+          tags,
+          price: tier === 'paid' ? price : 0,
+          allowComments,
+          tier,
+          collection,
+          attachments,
+          date_created: new Date().toISOString(),
+          user_id: JSON.parse(localStorage.getItem('user_info') || '{}').user_id || 0
+        };
+      }
+
+      // Get existing drafts from localStorage
+      const existingDrafts = JSON.parse(localStorage.getItem('clinician_drafts') || '[]');
+      
+      let updatedDrafts;
+      if (draftId) {
+        // Update existing draft
+        updatedDrafts = existingDrafts.map((d: any) => d.id === parseInt(draftId) ? draft : d);
+      } else {
+        // Add new draft
+        updatedDrafts = [...existingDrafts, draft];
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('clinician_drafts', JSON.stringify(updatedDrafts));
+      
+      console.log('Draft saved:', draft);
+      alert(draftId ? 'Draft updated successfully!' : 'Draft saved successfully!');
     } catch (error) {
       console.error('Error saving draft:', error);
       alert('Failed to save draft');
@@ -237,6 +321,12 @@ export default function CreatePostPage() {
         {/* Column B - Main Content */}
         <div className="w-4/5 p-6 bg-d">
           <div className="bg-white rounded-xl  ">
+            {/* Page Title */}
+            {isEditingDraft && (
+              <div className="p-6 border-b border-gray-200">
+                <h1 className="text-2xl font-bold text-gray-900">Edit Draft</h1>
+              </div>
+            )}
             {/* Attachments Section */}
             <div className="p-6 border-1 rounded-md border-gray-200">
               <div className="flex justify-between items-start mb-4">
