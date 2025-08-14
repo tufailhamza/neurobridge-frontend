@@ -1,18 +1,18 @@
 export interface Clinician {
   user_id: string;  
   specialty: string;
-  profileImage: string | null;
-  isSubscribed: boolean;
+  profile_image: string | null;
+  is_subscribed: boolean;
   prefix: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   country: string;
   city: string;
   state: string;
-  zipCode: string;
-  clinicianType: ClinicianType;
-  licenseNumber: string;
-  areaOfExpertise: AreaOfExpertiseClinician;
+  zip_code: string;
+  clinician_type: ClinicianType;
+  license_number: string;
+  area_of_expertise: AreaOfExpertiseClinician;
   email?: string;
   password?: string;
   confirmPassword?: string;

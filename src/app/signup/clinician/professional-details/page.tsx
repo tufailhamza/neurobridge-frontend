@@ -72,7 +72,7 @@ export default function ProfessionalDetailsPage() {
         localStorage.removeItem('signup_general');
         
         // Redirect to clinician home page (logged in)
-        router.push('/clinician/home');
+        router.push('/clinician/welcome');
         
       } catch (loginError) {
         console.error('Auto-login error:', loginError);

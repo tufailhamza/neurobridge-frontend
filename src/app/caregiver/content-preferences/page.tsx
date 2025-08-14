@@ -5,10 +5,14 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/login/Header';
 import TopicPills from '@/components/login/caregiver/TopicPills';
 import { ContentPreferences } from '@/data/config';
+import { preferencesApi } from '@/services/preferences';
 
 export default function ContentPreferencesPage() {
   const router = useRouter();
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleTopicToggle = (topic: string) => {
     setSelectedTopics(prev => 
@@ -16,13 +20,49 @@ export default function ContentPreferencesPage() {
         ? prev.filter(t => t !== topic)
         : [...prev, topic]
     );
+    // Clear any previous messages when user makes changes
+    setError(null);
+    setSuccessMessage(null);
   };
 
-  const handleContinue = () => {
-    // Handle continue logic here
-    console.log('Selected topics:', selectedTopics);
-    // Navigate to next step
-    router.push('/caregiver/home');
+  const handleContinue = async () => {
+    if (selectedTopics.length === 0) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      // Get user info from localStorage
+      const userInfo = localStorage.getItem('user_info');
+      if (!userInfo) {
+        throw new Error('User information not found. Please log in again.');
+      }
+
+      const user = JSON.parse(userInfo);
+      
+      // Call the API to update content preferences
+      await preferencesApi.updateContentPreferences(
+        user.user_id,
+        'caregiver',
+        selectedTopics
+      );
+
+      setSuccessMessage('Content preferences saved successfully!');
+      
+      // Navigate to home page after a short delay to show success message
+      setTimeout(() => {
+        router.push('/caregiver/home');
+      }, 1500);
+
+    } catch (err) {
+      console.error('Error saving content preferences:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save content preferences. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -54,22 +94,37 @@ export default function ContentPreferencesPage() {
               />
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+                {successMessage}
+              </div>
+            )}
+
             {/* Continue Button */}
             <div className="flex justify-between items-center">
               <button
                 onClick={handleContinue}
-                disabled={selectedTopics.length === 0}
+                disabled={selectedTopics.length === 0 || isSaving}
                 className={`px-6 py-3 font-semibold rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  selectedTopics.length > 0
+                  selectedTopics.length > 0 && !isSaving
                     ? 'bg-a hover:bg-a-hover text-white'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
               <button
                 onClick={() => router.push('/caregiver/home')}
-                className="px-8 pr-16 py-3 font-semibold text-b hover:text-a-hover transition-colors duration-200 focus:outline-none"
+                disabled={isSaving}
+                className="px-8 pr-16 py-3 font-semibold text-b hover:text-a-hover transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Skip →
               </button>

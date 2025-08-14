@@ -1,106 +1,113 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CaregiverSidebar from '../sidebar';
-import { mockClinicians } from '@/data/mockClinicians';
 import { Clinician } from '@/types/Clinician';
 import { clinicianTypes, specializations } from '@/data/config';
-
-// Mock data for discover clinicians (clinicians not yet subscribed)
-const discoverClinicians: Clinician[] = [
-  {
-    user_id: '6',
-    specialty: 'Applied Behavior Analysis',
-    profileImage: null,
-    isSubscribed: false,
-    prefix: 'Dr.',
-    firstName: 'Jennifer',
-    lastName: 'Davis',
-    country: 'US',
-    city: 'Boston',
-    state: 'MA',
-    zipCode: '02101',
-    clinicianType: 'BCBA',
-    licenseNumber: 'LIC33333',
-    areaOfExpertise: 'Behavior Intervention Plans'
-  },
-  {
-    user_id: '7',
-    specialty: 'Social Skills Development',
-    profileImage: null,
-    isSubscribed: false,
-    prefix: 'Dr.',
-    firstName: 'David',
-    lastName: 'Thompson',
-    country: 'US',
-    city: 'Seattle',
-    state: 'WA',
-    zipCode: '98101',
-    clinicianType: 'BCBA',
-    licenseNumber: 'LIC44444',
-    areaOfExpertise: 'Social Skills Training'
-  },
-  {
-    user_id: '8',
-    specialty: 'Cognitive Behavioral Therapy',
-    profileImage: null,
-    isSubscribed: false,
-    prefix: 'Dr.',
-    firstName: 'Maria',
-    lastName: 'Garcia',
-    country: 'US',
-    city: 'Miami',
-    state: 'FL',
-    zipCode: '33101',
-    clinicianType: 'BCBA',
-    licenseNumber: 'LIC55555',
-    areaOfExpertise: 'Trauma-Informed ABA'
-  },
-  {
-    user_id: '9',
-    specialty: 'Family Therapy',
-    profileImage: null,
-    isSubscribed: false,
-    prefix: 'Dr.',
-    firstName: 'James',
-    lastName: 'Brown',
-    country: 'US',
-    city: 'Denver',
-    state: 'CO',
-    zipCode: '80201',
-    clinicianType: 'BCBA',
-    licenseNumber: 'LIC66666',
-    areaOfExpertise: 'Social Skills Training'
-  },
-  {
-    user_id: '10',
-    specialty: 'Play Therapy',
-    profileImage: null,
-    isSubscribed: false,
-    prefix: 'Dr.',
-    firstName: 'Amanda',
-    lastName: 'Lee',
-    country: 'US',
-    city: 'Portland',
-    state: 'OR',
-    zipCode: '97201',
-    clinicianType: 'BCBA',
-    licenseNumber: 'LIC77777',
-    areaOfExpertise: 'Play-Based Therapy'
-  }
-];
-
 
 export default function SubscribedPage() {
   const [activeTab, setActiveTab] = useState<'subscribed' | 'discover'>('subscribed');
   const [searchQuery, setSearchQuery] = useState('');
-  const [subscribedClinicians, setSubscribedClinicians] = useState<Clinician[]>(mockClinicians);
-  const [discoverCliniciansList, setDiscoverCliniciansList] = useState<Clinician[]>(discoverClinicians);
+  const [subscribedClinicians, setSubscribedClinicians] = useState<Clinician[]>([]);
+  const [discoverCliniciansList, setDiscoverCliniciansList] = useState<Clinician[]>([]);
   const [selectedClinicianType, setSelectedClinicianType] = useState<string>('all');
   const [selectedSpecialization, setSelectedSpecialization] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Clinician types for dropdown
+  // Fetch subscribed clinicians from backend API
+  useEffect(() => {
+    const fetchSubscribedClinicians = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get user info from localStorage
+        const userInfo = localStorage.getItem('user_info');
+        if (!userInfo) {
+          throw new Error('User not authenticated');
+        }
+        
+        const user = JSON.parse(userInfo);
+        const accessToken = localStorage.getItem('access_token');
+        
+        if (!accessToken) {
+          throw new Error('No access token found');
+        }
 
+        // Fetch subscribed clinicians for the current caregiver
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/clinicians/subscribed/${user.user_id}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized. Please log in again.');
+          } else if (response.status === 403) {
+            throw new Error('Access forbidden. Please check your permissions.');
+          } else if (response.status === 404) {
+            // No subscribed clinicians found, set empty array
+            setSubscribedClinicians([]);
+            return;
+          } else {
+            throw new Error(`Failed to fetch subscribed clinicians: ${response.status}`);
+          }
+        }
+
+        const data = await response.json();
+        setSubscribedClinicians(data || []);
+      } catch (err) {
+        console.error('Error fetching subscribed clinicians:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch subscribed clinicians');
+        setSubscribedClinicians([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubscribedClinicians();
+  }, []);
+
+  // Fetch discover clinicians from backend API
+  useEffect(() => {
+    const fetchDiscoverClinicians = async () => {
+      try {
+        // Get user info from localStorage
+        const userInfo = localStorage.getItem('user_info');
+        if (!userInfo) {
+          return;
+        }
+        
+        const user = JSON.parse(userInfo);
+        const accessToken = localStorage.getItem('access_token');
+        
+        if (!accessToken) {
+          return;
+        }
+
+        // Fetch discover clinicians (clinicians not yet subscribed)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/clinicians/unsubscribed/${user.user_id}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setDiscoverCliniciansList(data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching discover clinicians:', err);
+        // Don't set error for discover clinicians as it's not critical
+      }
+    };
+
+    fetchDiscoverClinicians();
+  }, []);
 
   const handleDelete = (clinicianId: string) => {
     setSubscribedClinicians(prev => prev.filter(c => c.user_id !== clinicianId));
@@ -114,7 +121,7 @@ export default function SubscribedPage() {
     const clinicianToSubscribe = discoverCliniciansList.find(c => c.user_id === clinicianId);
     if (clinicianToSubscribe) {
       // Add to subscribed list
-      setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, isSubscribed: true }]);
+      setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, is_subscribed: true }]);
       // Remove from discover list
       setDiscoverCliniciansList(prev => prev.filter(c => c.user_id !== clinicianId));
     }
@@ -125,13 +132,60 @@ export default function SubscribedPage() {
   };
 
   const filteredClinicians = getCurrentClinicians().filter(clinician => {
-    const fullName = `${clinician.firstName || ''} ${clinician.lastName || ''}`.toLowerCase();
+    const fullName = `${clinician.first_name || ''} ${clinician.last_name || ''}`.toLowerCase();
     const searchLower = searchQuery.toLowerCase();
     
     return fullName.includes(searchLower) ||
            (clinician.specialty || '').toLowerCase().includes(searchLower) ||
-           (clinician.areaOfExpertise || '').toLowerCase().includes(searchLower);
+           (clinician.area_of_expertise || '').toLowerCase().includes(searchLower);
   });
+
+  // Show loading state
+  if (loading && activeTab === 'subscribed') {
+    return (
+      <div className="h-screen bg-d">
+        <CaregiverSidebar />
+        <div className="ml-64 h-full flex flex-col">
+          <div className="p-6 border-b border-gray-200">
+            <h1 className="text-3xl font-bold text-b mb-6">Subscribed</h1>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading subscribed clinicians...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error && activeTab === 'subscribed') {
+    return (
+      <div className="h-screen bg-d">
+        <CaregiverSidebar />
+        <div className="ml-64 h-full flex flex-col">
+          <div className="p-6 border-b border-gray-200">
+            <h1 className="text-3xl font-bold text-b mb-6">Subscribed</h1>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="text-center py-12">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-d">
@@ -259,16 +313,16 @@ export default function SubscribedPage() {
                 <div className="flex items-center space-x-4">
                   {/* Profile Icon */}
                   <div className="w-12 h-12 rounded-full bg-b flex items-center justify-center text-white font-bold text-lg">
-                    {(clinician.firstName?.charAt(0) || '')}{(clinician.lastName?.charAt(0) || '') || '?'}
+                    {(clinician.first_name?.charAt(0) || '')}{(clinician.last_name?.charAt(0) || '') || '?'}
                   </div>
                   
                   {/* Clinician Info */}
                   <div>
                     <h3 className="font-semibold text-gray-900">
-                      {clinician.prefix || ''} {clinician.firstName || ''} {clinician.lastName || ''}
+                      {clinician.prefix || ''} {clinician.first_name || ''} {clinician.last_name || ''}
                     </h3>
                     <p className="text-gray-600 text-sm">{clinician.specialty || 'No specialty'}</p>
-                    <p className="text-gray-500 text-xs">{clinician.areaOfExpertise || 'No expertise area'}</p>
+                    <p className="text-gray-500 text-xs">{clinician.area_of_expertise || 'No expertise area'}</p>
                   </div>
                 </div>
 

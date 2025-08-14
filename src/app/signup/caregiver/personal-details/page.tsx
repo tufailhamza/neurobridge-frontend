@@ -30,7 +30,10 @@ export default function PersonalDetailsPage() {
         ...basicInfo,
         accountType,
         ...generalInfo,
-        ...personalInfo
+        ...personalInfo,
+        // Ensure all fields are strings as expected by backend
+        childAge: childAge.toString(),
+        yearsOfDiagnosis: yearsOfDiagnosis.toString()
       };
       
       console.log('Complete signup data:', signupData);
@@ -76,7 +79,7 @@ export default function PersonalDetailsPage() {
         localStorage.removeItem('signup_general');
         
         // Redirect to caregiver home page (logged in)
-        router.push('/caregiver/home');
+        router.push('/caregiver/welcome');
         
       } catch (loginError) {
         console.error('Auto-login error:', loginError);

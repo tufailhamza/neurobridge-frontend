@@ -14,6 +14,14 @@
             "folderPath": "frontend\\src\\app\\caregiver\\",
             "color": "foldercolorizer.color_ff00ff",
             "badge": "😲"
+        },
+        {
+            "folderPath": "frontend\\src\\app\\signup\\caregiver\\",
+            "badge": "😃"
+        },
+        {
+            "folderPath": "frontend\\src\\app\\signup\\clinician\\",
+            "badge": "💋"
         }
     ]
 }
