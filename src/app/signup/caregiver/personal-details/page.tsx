@@ -220,14 +220,14 @@ export default function PersonalDetailsPage() {
               {/* Years of Diagnosis Field */}
               <div>
                 <label htmlFor="yearsOfDiagnosis" className="block text-sm font-medium text-b mb-2">
-                  Years of Diagnosis
+                  Year of Diagnosis
                 </label>
                 <input
                   id="yearsOfDiagnosis"
                   name="yearsOfDiagnosis"
                   type="number"
                   min="0"
-                  max="25"
+                  max="2025"
                   required
                   value={yearsOfDiagnosis}
                   onChange={(e) => setYearsOfDiagnosis(e.target.value)}
