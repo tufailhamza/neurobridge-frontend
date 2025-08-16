@@ -15,6 +15,12 @@ export default function PersonalDetailsPage() {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Simple validation - check if any field is empty
+    if (!caregiverRole || !childAge || !diagnosis || !yearsOfDiagnosis) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
     try {
       // Get all stored data
       const basicInfo = JSON.parse(localStorage.getItem('signup_basic') || '{}');
@@ -125,7 +131,7 @@ export default function PersonalDetailsPage() {
                   onChange={(e) => setCaregiverRole(e.target.value)}
                   className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
                 >
-                  <option value="">Select caregiver role</option>
+                  <option value="">Select</option>
                   <option value="Parent">Parent</option>
                   <option value="Guardian">Guardian</option>
                   <option value="Foster Parent">Foster Parent</option>
@@ -172,29 +178,42 @@ export default function PersonalDetailsPage() {
                   onChange={(e) => setDiagnosis(e.target.value)}
                   className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
                 >
-                  <option value="">Select diagnosis</option>
-                  <option value="Autism Spectrum Disorder">Autism Spectrum Disorder</option>
-                  <option value="ADHD">Attention Deficit Hyperactivity Disorder (ADHD)</option>
-                  <option value="Learning Disability">Learning Disability</option>
-                  <option value="Developmental Delay">Developmental Delay</option>
-                  <option value="Down Syndrome">Down Syndrome</option>
-                  <option value="Cerebral Palsy">Cerebral Palsy</option>
-                  <option value="Intellectual Disability">Intellectual Disability</option>
-                  <option value="Speech Disorder">Speech Disorder</option>
-                  <option value="Language Disorder">Language Disorder</option>
-                  <option value="Sensory Processing Disorder">Sensory Processing Disorder</option>
-                  <option value="Anxiety Disorder">Anxiety Disorder</option>
+                  <option value="">Select</option>
+                  <option value="Dyslexia">Dyslexia</option>
+                  <option value="Dyscalculia">Dyscalculia</option>
+                  <option value="Dysgraphia">Dysgraphia</option>
+                  <option value="Auditory Processing Disorder (APD)">Auditory Processing Disorder (APD)</option>
+                  <option value="Nonverbal Learning Disability">Nonverbal Learning Disability</option>
+                  <option value="Autism Spectrum Disorder (ASD)">Autism Spectrum Disorder (ASD)</option>
+                  <option value="ADHD / ADD">ADHD / ADD</option>
+                  <option value="Tourette Syndrome">Tourette Syndrome</option>
+                  <option value="Generalized Anxiety Disorder">Generalized Anxiety Disorder</option>
                   <option value="Depression">Depression</option>
                   <option value="Bipolar Disorder">Bipolar Disorder</option>
-                  <option value="Obsessive-Compulsive Disorder">Obsessive-Compulsive Disorder</option>
-                  <option value="Tourette Syndrome">Tourette Syndrome</option>
+                  <option value="Oppositional Defiant Disorder (ODD)">Oppositional Defiant Disorder (ODD)</option>
+                  <option value="Conduct Disorder">Conduct Disorder</option>
+                  <option value="Selective Mutism">Selective Mutism</option>
+                  <option value="Seizure Disorders">Seizure Disorders</option>
+                  <option value="Mild, Moderate, or Severe Intellectual Disability">Mild, Moderate, or Severe Intellectual Disability</option>
+                  <option value="Down Syndrome">Down Syndrome</option>
                   <option value="Fragile X Syndrome">Fragile X Syndrome</option>
-                  <option value="Prader-Willi Syndrome">Prader-Willi Syndrome</option>
-                  <option value="Williams Syndrome">Williams Syndrome</option>
-                  <option value="Fetal Alcohol Syndrome">Fetal Alcohol Syndrome</option>
-                  <option value="Multiple Diagnoses">Multiple Diagnoses</option>
-                  <option value="Undiagnosed">Undiagnosed</option>
-                  <option value="Other">Other</option>
+                  <option value="Global Developmental Delay">Global Developmental Delay</option>
+                  <option value="Delayed Speech/Language Development">Delayed Speech/Language Development</option>
+                  <option value="Delayed Motor Development">Delayed Motor Development</option>
+                  <option value="Delayed Cognitive Development">Delayed Cognitive Development</option>
+                  <option value="Expressive Language Disorder">Expressive Language Disorder</option>
+                  <option value="Receptive Language Disorder">Receptive Language Disorder</option>
+                  <option value="Speech Disorder">Speech Disorder</option>
+                  <option value="Childhood Apraxia of Speech">Childhood Apraxia of Speech</option>
+                  <option value="Stuttering">Stuttering</option>
+                  <option value="Cerebral Palsy">Cerebral Palsy</option>
+                  <option value="Muscular Dystrophy">Muscular Dystrophy</option>
+                  <option value="Fetal Alcohol Spectrum Disorders (FASD)">Fetal Alcohol Spectrum Disorders (FASD)</option>
+                  <option value="Sensory Processing Disorder">Sensory Processing Disorder</option>
+                  <option value="Traumatic Brain Injury (TBI)">Traumatic Brain Injury (TBI)</option>
+                  <option value="Vision Impairments / Blindness">Vision Impairments / Blindness</option>
+                  <option value="Hearing Impairments / Deafness">Hearing Impairments / Deafness</option>
+                  <option value="Multiple Disabilities">Multiple Disabilities</option>
                 </select>
               </div>
 
@@ -213,7 +232,7 @@ export default function PersonalDetailsPage() {
                   value={yearsOfDiagnosis}
                   onChange={(e) => setYearsOfDiagnosis(e.target.value)}
                   className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
-                  placeholder="Years"
+                  placeholder="YYYY"
                 />
               </div>
 

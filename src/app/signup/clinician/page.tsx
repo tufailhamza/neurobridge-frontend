@@ -17,6 +17,12 @@ export default function ClinicianSignupPage() {
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Simple validation - check if any field is empty
+    if (!prefix || !firstName || !lastName || !country || !city || !state || !zipCode) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
     // Store general info in localStorage
     const generalInfo = { prefix, firstName, lastName, country, city, state, zipCode };
     localStorage.setItem('signup_general', JSON.stringify(generalInfo));

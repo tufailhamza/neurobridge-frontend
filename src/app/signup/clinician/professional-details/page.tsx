@@ -14,6 +14,12 @@ export default function ProfessionalDetailsPage() {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Simple validation - check if any field is empty
+    if (!clinicianType || !licenseNumber || !areaOfExpertise) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
     try {
       // Get all stored data
       const basicInfo = JSON.parse(localStorage.getItem('signup_basic') || '{}');
@@ -168,27 +174,66 @@ export default function ProfessionalDetailsPage() {
                   className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
                 >
                   <option value="">Select area of expertise</option>
-                  <option value="Autism Spectrum Disorder">Autism Spectrum Disorder</option>
-                  <option value="ADHD">Attention Deficit Hyperactivity Disorder (ADHD)</option>
-                  <option value="Learning Disabilities">Learning Disabilities</option>
-                  <option value="Developmental Delays">Developmental Delays</option>
-                  <option value="Speech Disorders">Speech Disorders</option>
-                  <option value="Language Disorders">Language Disorders</option>
-                  <option value="Motor Skills">Motor Skills</option>
-                  <option value="Sensory Processing">Sensory Processing</option>
-                  <option value="Behavioral Issues">Behavioral Issues</option>
-                  <option value="Social Skills">Social Skills</option>
-                  <option value="Cognitive Development">Cognitive Development</option>
+                  <option value="Complex Communication Needs">Complex Communication Needs</option>
+                  <option value="Functional Behavior Assessment (FBA) / Analysis (FA)">Functional Behavior Assessment (FBA) / Analysis (FA)</option>
+                  <option value="Severe Problem Behaviors (e.g., aggression, self-injury)">Severe Problem Behaviors (e.g., aggression, self-injury)</option>
+                  <option value="Behavior Intervention Plans">Behavior Intervention Plans</option>
+                  <option value="Skill Acquisition">Skill Acquisition</option>
+                  <option value="Assessments and Evaluations">Assessments and Evaluations</option>
+                  <option value="Functional Communication Training (FCT)">Functional Communication Training (FCT)</option>
+                  <option value="Adaptive Living Skills">Adaptive Living Skills</option>
+                  <option value="Social Skills Training">Social Skills Training</option>
+                  <option value="Executive Functioning Support">Executive Functioning Support</option>
+                  <option value="Feeding Therapy (behavioral)">Feeding Therapy (behavioral)</option>
+                  <option value="Toilet Training">Toilet Training</option>
+                  <option value="Sleep Training">Sleep Training</option>
+                  <option value="Trauma-Informed ABA">Trauma-Informed ABA</option>
+                  <option value="Vocational & Life Skills">Vocational & Life Skills</option>
+                  <option value="Articulation & Phonological Disorders">Articulation & Phonological Disorders</option>
+                  <option value="Receptive & Expressive Language Delays">Receptive & Expressive Language Delays</option>
+                  <option value="Social Communication (Pragmatics)">Social Communication (Pragmatics)</option>
+                  <option value="Literacy & Reading Intervention">Literacy & Reading Intervention</option>
+                  <option value="Stuttering / Fluency Disorders">Stuttering / Fluency Disorders</option>
+                  <option value="Voice Disorders">Voice Disorders</option>
+                  <option value="Resonance Disorders (e.g., cleft palate)">Resonance Disorders (e.g., cleft palate)</option>
+                  <option value="Augmentative & Alternative Communication (AAC)">Augmentative & Alternative Communication (AAC)</option>
+                  <option value="Apraxia of Speech">Apraxia of Speech</option>
+                  <option value="Pediatric Feeding Disorders">Pediatric Feeding Disorders</option>
+                  <option value="Oral-Motor Therapy">Oral-Motor Therapy</option>
+                  <option value="Dysphagia (Swallowing Disorders)">Dysphagia (Swallowing Disorders)</option>
+                  <option value="Rumination">Rumination</option>
+                  <option value="Sensory Processing Disorders (SPD)">Sensory Processing Disorders (SPD)</option>
+                  <option value="Fine Motor Skills">Fine Motor Skills</option>
+                  <option value="Visual-Motor Integration">Visual-Motor Integration</option>
+                  <option value="Handwriting Intervention">Handwriting Intervention</option>
+                  <option value="Self-Care & Daily Living Skills">Self-Care & Daily Living Skills</option>
+                  <option value="Play-Based Therapy">Play-Based Therapy</option>
+                  <option value="Developmental Coordination Disorder">Developmental Coordination Disorder</option>
                   <option value="Emotional Regulation">Emotional Regulation</option>
-                  <option value="Anxiety">Anxiety</option>
-                  <option value="Depression">Depression</option>
-                  <option value="Trauma">Trauma</option>
-                  <option value="Family Therapy">Family Therapy</option>
-                  <option value="Early Intervention">Early Intervention</option>
-                  <option value="School Psychology">School Psychology</option>
-                  <option value="Neuropsychology">Neuropsychology</option>
-                  <option value="Pediatric Neurology">Pediatric Neurology</option>
-                  <option value="Other">Other</option>
+                  <option value="Gross Motor Delays">Gross Motor Delays</option>
+                  <option value="Torticollis & Plagiocephaly">Torticollis & Plagiocephaly</option>
+                  <option value="Gait Abnormalities">Gait Abnormalities</option>
+                  <option value="Neuromuscular Disorders (e.g., CP, spina bifida)">Neuromuscular Disorders (e.g., CP, spina bifida)</option>
+                  <option value="Stroke Rehabilitation">Stroke Rehabilitation</option>
+                  <option value="Traumatic Brain Injury (TBI)">Traumatic Brain Injury (TBI)</option>
+                  <option value="Vestibular & Balance Therapy">Vestibular & Balance Therapy</option>
+                  <option value="Joint & Muscle Pain">Joint & Muscle Pain</option>
+                  <option value="Scoliosis Management">Scoliosis Management</option>
+                  <option value="Mobility & Strength Training">Mobility & Strength Training</option>
+                  <option value="Gross Motor Skill Development">Gross Motor Skill Development</option>
+                  <option value="Muscle Tone Regulation (Hypotonia, Hypertonia)">Muscle Tone Regulation (Hypotonia, Hypertonia)</option>
+                  <option value="Strengthening and Endurance Building">Strengthening and Endurance Building</option>
+                  <option value="Balance and Coordination Training">Balance and Coordination Training</option>
+                  <option value="Gait Training and Mobility Improvement">Gait Training and Mobility Improvement</option>
+                  <option value="Postural Control and Alignment">Postural Control and Alignment</option>
+                  <option value="Motor Planning and Motor Learning">Motor Planning and Motor Learning</option>
+                  <option value="Torticollis and Plagiocephaly Treatment">Torticollis and Plagiocephaly Treatment</option>
+                  <option value="Orthotic Assessment and Management">Orthotic Assessment and Management</option>
+                  <option value="Joint Range of Motion and Flexibility">Joint Range of Motion and Flexibility</option>
+                  <option value="Adaptive Equipment Training (Walkers, Wheelchairs)">Adaptive Equipment Training (Walkers, Wheelchairs)</option>
+                  <option value="Functional Mobility Training (Transfers, Stairs)">Functional Mobility Training (Transfers, Stairs)</option>
+                  <option value="Sensory-Motor Integration">Sensory-Motor Integration</option>
+                  <option value="Prevention of Secondary Complications">Prevention of Secondary Complications</option>
                 </select>
               </div>
 
