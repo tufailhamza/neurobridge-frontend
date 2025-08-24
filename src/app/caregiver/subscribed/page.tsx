@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CaregiverSidebar from '../sidebar';
 import { Clinician } from '@/types/Clinician';
 import { clinicianTypes, specializations } from '@/data/config';
 import { env } from '@/config/env';
 
-export default function SubscribedPage() {
+// Separate component that uses useSearchParams
+function SubscribedContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'subscribed' | 'discover'>('subscribed');
   const [searchQuery, setSearchQuery] = useState('');
@@ -519,5 +520,13 @@ export default function SubscribedPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SubscribedPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SubscribedContent />
+    </Suspense>
   );
 } 

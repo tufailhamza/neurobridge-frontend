@@ -13,7 +13,7 @@
  * - Create contacts for caregivers who message you
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import ClinicianSidebar from '../sidebar';
 import { Search, Filter, Star, Send, Archive, X, MoreVertical } from 'lucide-react';
 import PubNubService, { PubNubMessage } from '../../../services/pubnub';
@@ -40,7 +40,8 @@ interface Contact {
     unreadCount?: number; // Number of unread messages
 }
 
-export default function MessagesPage() {
+// Separate component that uses useSearchParams
+function MessagesContent() {
     const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
     const [messageInput, setMessageInput] = useState('');
     const [messages, setMessages] = useState<{ [key: number]: Message[] }>({});
@@ -884,5 +885,13 @@ export default function MessagesPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function MessagesPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <MessagesContent />
+        </Suspense>
     );
 } 

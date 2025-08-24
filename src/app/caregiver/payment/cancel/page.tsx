@@ -3,8 +3,10 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import CaregiverSidebar from '../../sidebar';
 import { XCircle, ArrowLeft } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function PaymentCancelPage() {
+// Separate component that uses useSearchParams
+function PaymentCancelContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -56,5 +58,13 @@ export default function PaymentCancelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentCancelPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentCancelContent />
+    </Suspense>
   );
 }
