@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import ClinicianSidebar from '../../sidebar';
 import { Collection } from '@/types/Collection';
+import { env } from '@/config/env';
 
 // Dynamically import TiptapEditor to avoid SSR issues
 const TiptapEditor = dynamic(() => import('@/components/TiptapEditor'), {
@@ -16,7 +17,8 @@ export default function CreatePostPage() {
   const router = useRouter();
   const [title, setTitle] = useState('Title goes here');
   const [content, setContent] = useState('');
-  const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const [price, setPrice] = useState(0);
   const [allowComments, setAllowComments] = useState(true);
@@ -25,13 +27,21 @@ export default function CreatePostPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
   const [isCollectionsDropdownOpen, setIsCollectionsDropdownOpen] = useState(false);
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
+  const [imageUrl, setImageUrl] = useState('');
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [isEditingDraft, setIsEditingDraft] = useState(false);
+  
+  // Schedule Release State
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Function to fetch user collections
   const fetchUserCollections = async () => {
@@ -45,7 +55,7 @@ export default function CreatePostPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/collections/user/${userInfo.user_id}`, {
+      const response = await fetch(`${env.BACKEND_URL}/collections/user/${userInfo.user_id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -76,18 +86,63 @@ export default function CreatePostPage() {
       if (draft) {
         setTitle(draft.title);
         setContent(draft.content);
-        setCoverImageUrl(draft.coverImageUrl || '');
+        setCoverImagePreview(draft.coverImageUrl || '');
+        setImageUrl(draft.frontendUrl || ''); // Restore the frontend URL
         setTags(draft.tags || []);
         setPrice(draft.price || 0);
         setAllowComments(draft.allowComments !== undefined ? draft.allowComments : true);
         setTier(draft.tier || 'public');
         setCollection(draft.collection || '');
-        setAttachments(draft.attachments || []);
+        setAttachmentPreviews(draft.attachments || []);
+        
+        // Load schedule release data
+        if (draft.isScheduled) {
+          setIsScheduled(true);
+          setScheduledDate(draft.scheduledDate || '');
+          setScheduledTime(draft.scheduledTime || '');
+        }
+        
         console.log('Draft loaded:', draft);
       }
     } catch (error) {
       console.error('Error loading draft:', error);
     }
+  };
+
+  // Function to handle schedule release toggle
+  const handleScheduleToggle = () => {
+    if (isScheduled) {
+      // If turning off scheduling, clear the scheduled date/time
+      setIsScheduled(false);
+      setScheduledDate('');
+      setScheduledTime('');
+    } else {
+      // If turning on scheduling, open the modal
+      setIsScheduleModalOpen(true);
+    }
+  };
+
+  // Function to confirm schedule
+  const handleConfirmSchedule = () => {
+    if (scheduledDate && scheduledTime) {
+      setIsScheduled(true);
+      setIsScheduleModalOpen(false);
+    }
+  };
+
+  // Function to format scheduled date for display
+  const formatScheduledDate = () => {
+    if (!scheduledDate || !scheduledTime) return '';
+    
+    const date = new Date(`${scheduledDate}T${scheduledTime}`);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   // Function to create a new collection
@@ -96,11 +151,21 @@ export default function CreatePostPage() {
       const accessToken = localStorage.getItem('access_token');
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
       
+      console.log('Access token:', accessToken ? 'Present' : 'Missing');
+      console.log('User info:', userInfo);
+      
       if (!accessToken || !userInfo.user_id) {
         throw new Error('No access token or user info found');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/collections`, {
+      console.log('Making request to:', `${env.BACKEND_URL}/collections`);
+      console.log('Request headers:', {
+        'Authorization': `Bearer ${accessToken ? accessToken.substring(0, 20) + '...' : 'None'}`,
+        'Content-Type': 'application/json',
+      });
+      console.log('Request body:', { name });
+      
+      const response = await fetch(`${env.BACKEND_URL}/collections`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -109,7 +174,12 @@ export default function CreatePostPage() {
         body: JSON.stringify({ name }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response status text:', response.statusText);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response body:', errorText);
         throw new Error(`Failed to create collection: ${response.statusText}`);
       }
 
@@ -136,11 +206,30 @@ export default function CreatePostPage() {
     const accessToken = localStorage.getItem('access_token');
     const userRole = localStorage.getItem('user_role');
     
+    console.log('Component mount - Access token:', accessToken ? 'Present' : 'Missing');
+    console.log('Component mount - User role:', userRole);
+    
     if (!accessToken) {
       alert('Please log in to create a post');
       router.push('/login');
       return;
     }
+
+    // Test authentication by making a simple request
+    const testAuth = async () => {
+      try {
+        const response = await fetch(`${env.BACKEND_URL}/health`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+        console.log('Auth test response:', response.status);
+      } catch (error) {
+        console.error('Auth test error:', error);
+      }
+    };
+    
+    testAuth();
 
     // Fetch user collections after authentication check
     fetchUserCollections();
@@ -182,6 +271,47 @@ export default function CreatePostPage() {
     setTitle(e.target.value);
   };
 
+  // File upload handlers
+  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCoverImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setAttachmentFiles(prev => [...prev, ...files]);
+      
+      // Create previews for new files
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachmentPreviews(prev => [...prev, e.target?.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+    setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addImageUrl = () => {
+    if (imageUrl.trim()) {
+      setAttachmentPreviews(prev => [...prev, imageUrl.trim()]);
+      setImageUrl('');
+    }
+  };
+
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
@@ -196,15 +326,19 @@ export default function CreatePostPage() {
           id: parseInt(draftId),
           title: title.trim() || 'Untitled Draft',
           content: content,
-          coverImageUrl,
+          coverImageUrl: coverImagePreview,
+          frontendUrl: imageUrl, // Save the frontend URL in draft
           tags,
           price: tier === 'paid' ? price : 0,
           allowComments,
           tier,
           collection,
-          attachments,
+          attachments: attachmentPreviews,
           date_created: new Date().toISOString(),
-          user_id: JSON.parse(localStorage.getItem('user_info') || '{}').user_id || 0
+          user_id: JSON.parse(localStorage.getItem('user_info') || '{}').user_id || 0,
+          isScheduled,
+          scheduledDate,
+          scheduledTime
         };
       } else {
         // Create new draft
@@ -212,15 +346,19 @@ export default function CreatePostPage() {
           id: Date.now(), // Use timestamp as temporary ID
           title: title.trim() || 'Untitled Draft',
           content: content,
-          coverImageUrl,
+          coverImageUrl: coverImagePreview,
+          frontendUrl: imageUrl, // Save the frontend URL in draft
           tags,
           price: tier === 'paid' ? price : 0,
           allowComments,
           tier,
           collection,
-          attachments,
+          attachments: attachmentPreviews,
           date_created: new Date().toISOString(),
-          user_id: JSON.parse(localStorage.getItem('user_info') || '{}').user_id || 0
+          user_id: JSON.parse(localStorage.getItem('user_info') || '{}').user_id || 0,
+          isScheduled,
+          scheduledDate,
+          scheduledTime
         };
       }
 
@@ -255,10 +393,27 @@ export default function CreatePostPage() {
       return;
     }
 
+    // Validate scheduled date if scheduling is enabled
+    if (isScheduled) {
+      if (!scheduledDate || !scheduledTime) {
+        alert('Please set a scheduled date and time');
+        return;
+      }
+      
+      const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+      const now = new Date();
+      
+      if (scheduledDateTime <= now) {
+        alert('Scheduled date must be in the future');
+        return;
+      }
+    }
+
     setIsPublishing(true);
     try {
       const postData = {
-        image_url: coverImageUrl,
+        image_url: coverImagePreview,
+        frontend_url: imageUrl, // Add the frontend URL entered by user
         title: title.trim(),
         tags: tags,
         price: tier === 'paid' ? price : 0,
@@ -266,8 +421,10 @@ export default function CreatePostPage() {
         allow_comments: allowComments,
         tier: tier,
         collection: collection,
-        attachments: attachments,
-        date_published: new Date().toISOString()
+        attachments: attachmentPreviews,
+        date_published: isScheduled ? `${scheduledDate}T${scheduledTime}` : new Date().toISOString(),
+        is_scheduled: isScheduled,
+        scheduled_date: isScheduled ? `${scheduledDate}T${scheduledTime}` : null
       };
 
       // Get the access token from localStorage
@@ -277,7 +434,7 @@ export default function CreatePostPage() {
         throw new Error('No access token found. Please log in again.');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/posts/`, {
+      const response = await fetch(`${env.BACKEND_URL}/posts/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -298,10 +455,15 @@ export default function CreatePostPage() {
 
       const result = await response.json();
       console.log('Post published successfully:', result);
-      alert('Post published successfully!');
       
-      // Clear form or redirect to published post
-      // You can add navigation logic here
+      if (isScheduled) {
+        alert(`Post scheduled successfully! It will be published on ${formatScheduledDate()}`);
+      } else {
+        alert('Post published successfully!');
+      }
+      
+      // Redirect to home page after successful publishing
+      router.push('/clinician/home');
       
     } catch (error) {
       console.error('Error publishing post:', error);
@@ -333,24 +495,129 @@ export default function CreatePostPage() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-gray-900">Attachments</h3>
                   <p className="text-sm text-gray-500">
-                    Recommended size 1024x1024 JPG, JPEG, PNG, PDF or GIF Max 2GB
+                    Upload files (JPG, JPEG, PNG, PDF, GIF Max 2GB) or add image links
                   </p>
                 </div>
-                <button className=" text-gray-900 px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors">
+                <button 
+                  onClick={() => document.getElementById('attachmentFiles')?.click()}
+                  className="font-bold text-gray-900 px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors border border-gray-300"
+                >
                   Upload
                 </button>
               </div>
               
               <div className="space-y-3">
+                {/* Image URL Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Add Image Link:</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="Enter image URL (e.g., https://example.com/image.jpg)"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addImageUrl();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={addImageUrl}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <input
-                    type="url"
-                    id="coverImageUrl"
-                    value={coverImageUrl}
-                    onChange={(e) => setCoverImageUrl(e.target.value)}
-                    placeholder="Enter your cover image URL"
-                    className="w-full px-3 py-2 text-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    type="file"
+                    id="coverImageFile"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setCoverImageFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                          setCoverImagePreview(e.target?.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
                   />
+                
+                </div>
+                
+                {/* Attachments Upload */}
+                <div className="space-y-3">
+                  <div>
+                    <input
+                      type="file"
+                      id="attachmentFiles"
+                      accept="image/*,video/*,.pdf,.doc,.docx"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setAttachmentFiles(prev => [...prev, ...files]);
+                        
+                        // Create previews for new files
+                        files.forEach(file => {
+                          if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                              setAttachmentPreviews(prev => [...prev, e.target?.result as string]);
+                            };
+                            reader.readAsDataURL(file);
+                          } else {
+                            setAttachmentPreviews(prev => [...prev, file.name]);
+                          }
+                        });
+                      }}
+                      className="hidden"
+                    />
+                   
+                  </div>
+                  
+                  {/* Attachment Previews */}
+                  {attachmentPreviews.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-900">Attachments:</h4>
+                      {attachmentPreviews.map((preview, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                          <div className="flex items-center space-x-2">
+                            {preview.startsWith('data:') ? (
+                              <img src={preview} alt="Preview" className="w-8 h-8 object-cover rounded" />
+                            ) : preview.startsWith('http') ? (
+                              <img src={preview} alt="Image" className="w-8 h-8 object-cover rounded" />
+                            ) : (
+                              <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                                <span className="text-xs text-gray-500">📎</span>
+                              </div>
+                            )}
+                            <span className="text-sm text-gray-700">
+                              {preview.startsWith('data:') ? `File ${index + 1}` : 
+                               preview.startsWith('http') ? `Image ${index + 1}` : preview}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+                              setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -452,7 +719,7 @@ export default function CreatePostPage() {
                      placeholder="0.00"
                      value={price}
                      onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                     className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                     className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-black focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                    />
                  </div>
                </div>
@@ -474,11 +741,27 @@ export default function CreatePostPage() {
              </div>
 
             {/* Schedule Release */}
-            <div className="flex items-center justify-between border-1 rounded-xl p-3">
-              <span className="text-sm font-medium text-gray-900">Schedule Release</span>
-              <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-b focus:ring-offset-2">
-                <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
-              </button>
+            <div className="space-y-3 border-1 rounded-xl p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-900">Schedule Release</span>
+                <button 
+                  onClick={handleScheduleToggle}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-b focus:ring-offset-2 ${
+                    isScheduled ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isScheduled ? 'translate-x-6' : 'translate-x-1'
+                  }`}></span>
+                </button>
+              </div>
+              
+              {/* Show scheduled date if set */}
+              {isScheduled && scheduledDate && scheduledTime && (
+                <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md">
+                  Scheduled for: {formatScheduledDate()}
+                </div>
+              )}
             </div>
 
             {/* Collections */}
@@ -680,6 +963,87 @@ export default function CreatePostPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Release Modal */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 bg-black/20 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-md">
+            {/* Header Row */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Schedule Release</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsScheduleModalOpen(false);
+                  setScheduledDate('');
+                  setScheduledTime('');
+                }}
+                className="text-gray-900 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-gray-600 mb-4">
+              Choose when you want your post to be published
+            </p>
+
+            {/* Date and Time Inputs */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsScheduleModalOpen(false);
+                  setScheduledDate('');
+                  setScheduledTime('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSchedule}
+                disabled={!scheduledDate || !scheduledTime}
+                className="flex-1 px-4 py-2 bg-b text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Schedule
               </button>
             </div>
           </div>

@@ -7,6 +7,7 @@ import EditBioModal from '@/components/EditBioModal';
 import ImageUpload from '@/components/ImageUpload';
 import ContentPreferences from '@/components/ContentPreferences';
 import ContentPreferencesModal from '@/components/ContentPreferencesModal';
+import { env } from '@/config/env';
 
 interface CaregiverProfile {
   user_id: number;
@@ -88,8 +89,12 @@ export default function CaregiverProfilePage() {
           throw new Error('No user ID found in localStorage');
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+        const accessToken = localStorage.getItem('access_token');
+        
+        const response = await fetch(`${env.BACKEND_URL}/profile/${userId}`, {
           headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
             'accept': 'application/json'
           }
         });
@@ -101,8 +106,17 @@ export default function CaregiverProfilePage() {
           setCoverImage(data.cover_image);
           setContentPreferences(data.content_preferences_tags || []);
         } else {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to fetch profile');
+          // Check if response is JSON before trying to parse it
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to fetch profile: ${response.status}`);
+          } else {
+            // Handle HTML error responses
+            const errorText = await response.text();
+            console.error('Non-JSON error response:', errorText);
+            throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
+          }
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred while fetching the profile';
@@ -152,16 +166,22 @@ export default function CaregiverProfilePage() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-d flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="h-screen bg-d">
+        <CaregiverSidebar />
+        <div className="ml-64 h-full flex items-center justify-center">
+          <div className="text-xl">Loading...</div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="h-screen bg-d flex items-center justify-center">
-        <div className="text-xl text-red-600">Error: {error}</div>
+      <div className="h-screen bg-d">
+        <CaregiverSidebar />
+        <div className="ml-64 h-full flex items-center justify-center">
+          <div className="text-xl text-red-600">Error: {error}</div>
+        </div>
       </div>
     );
   }

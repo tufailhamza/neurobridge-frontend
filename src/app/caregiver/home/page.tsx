@@ -22,7 +22,7 @@ export default function CaregiverHomePage() {
   
   // Clinicians states
   const [unsubscribedClinicians, setUnsubscribedClinicians] = useState<any[]>([]);
-  const [displayedClinicians, setDisplayedClinicians] = useState<number>(3);
+  const [displayedClinicians, setDisplayedClinicians] = useState<number>(5);
   const [cliniciansLoading, setCliniciansLoading] = useState(true);
   const [subscribingClinicians, setSubscribingClinicians] = useState<Set<number>>(new Set());
 
@@ -149,7 +149,7 @@ export default function CaregiverHomePage() {
     const fetchFeedData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=20`);
+        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=7`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch posts: ${response.status}`);
@@ -439,7 +439,7 @@ export default function CaregiverHomePage() {
                 ) : (
                   <>
                     {unsubscribedClinicians.slice(0, displayedClinicians).map((clinician, index) => (
-                      <div key={clinician.user_id || index} className="flex items-center justify-between bg-gray-50 rounded-lg">
+                      <div key={clinician.user_id || index} className="flex items-center justify-between rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 bg-b rounded-full flex items-center justify-center">
                             <span className="text-white font-semibold">
@@ -469,14 +469,14 @@ export default function CaregiverHomePage() {
                       </div>
                     ))}
                     
-                    {/* Load more button */}
+                    {/* See all button */}
                     {unsubscribedClinicians.length > displayedClinicians && (
                       <div className="text-left pt-2">
                         <button 
-                          onClick={() => setDisplayedClinicians(prev => prev + 3)}
+                          onClick={() => router.push('/caregiver/subscribed?tab=discover')}
                           className="text-b text-sm font-bold hover:underline"
                         >
-                          Load more
+                          See all
                         </button>
                       </div>
                     )}

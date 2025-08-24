@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Caregiver } from '@/types/Caregiver';
+import { env } from '@/config/env';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -65,9 +66,12 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
         make_personal_details_public: formData.makePersonalDetailsPublic
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+      const accessToken = localStorage.getItem('access_token');
+      
+      const response = await fetch(`${env.BACKEND_URL}/profile/${userId}`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           'accept': 'application/json'
         },
@@ -75,8 +79,17 @@ export default function EditProfileModal({ isOpen, onClose, caregiver, onSave }:
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update profile');
+        // Check if response is JSON before trying to parse it
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || `Failed to update profile: ${response.status}`);
+        } else {
+          // Handle HTML error responses
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          throw new Error(`Failed to update profile: ${response.status} ${response.statusText}`);
+        }
       }
 
       const result = await response.json();

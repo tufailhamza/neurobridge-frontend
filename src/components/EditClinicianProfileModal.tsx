@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { env } from '@/config/env';
 
 interface ClinicianProfile {
   user_id: number;
@@ -73,9 +74,12 @@ export default function EditClinicianProfileModal({ isOpen, onClose, clinician, 
         throw new Error('No user ID found in localStorage');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profile/${userId}`, {
+      const accessToken = localStorage.getItem('access_token');
+      
+      const response = await fetch(`${env.BACKEND_URL}/profile/${userId}`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           'accept': 'application/json'
         },
@@ -83,8 +87,17 @@ export default function EditClinicianProfileModal({ isOpen, onClose, clinician, 
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update profile');
+        // Check if response is JSON before trying to parse it
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || `Failed to update profile: ${response.status}`);
+        } else {
+          // Handle HTML error responses
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          throw new Error(`Failed to update profile: ${response.status} ${response.statusText}`);
+        }
       }
 
       const result = await response.json();

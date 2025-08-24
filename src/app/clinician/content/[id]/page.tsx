@@ -5,17 +5,39 @@ import { useParams } from 'next/navigation';
 import CaregiverSidebar from '../../sidebar';
 import { feedCards } from '@/data/feedCards';
 import { FeedCard } from '@/types/FeedCard';
+import { env } from '@/config/env';
 
 export default function ContentPage() {
   const params = useParams();
   const [card, setCard] = useState<FeedCard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasPurchased, setHasPurchased] = useState(false);
 
   useEffect(() => {
     console.log('card', params);
     const cardId = params.id as string;
     const foundCard = feedCards.find(c => c.id === cardId);
     setCard(foundCard || null);
+    
+    // Check if user has already purchased this content
+    const checkPurchaseStatus = async () => {
+      try {
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const userId = userInfo.user_id || userInfo.id;
+        
+        if (userId) {
+          const response = await fetch(`${env.BACKEND_URL}/stripe/purchases/check/${userId}/${cardId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setHasPurchased(data.hasAccess);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking purchase status:', error);
+      }
+    };
+
+    checkPurchaseStatus();
     setLoading(false);
   }, [params.id]);
 
@@ -68,9 +90,15 @@ export default function ContentPage() {
             <div className='border-2 border-gray-200 rounded-2xl p-6 mb-6'>
               <h3 className="text-lg font-semibold text-b mb-4">Purchase</h3>
               <div className="text-center">
-                <button className="w-full bg-a text-white py-3 px-6 rounded-lg font-medium hover:bg-opacity-90 transition-colors">
-                ${card.price}
-                </button>
+                {hasPurchased ? (
+                  <div className="w-full border-2 border-blue-700 text-blue-600 py-3 px-6 rounded-lg font-medium bg-white">
+                    Purchased
+                  </div>
+                ) : (
+                  <button className="w-full bg-a text-white py-3 px-6 rounded-lg font-medium hover:bg-opacity-90 transition-colors">
+                    ${card.price}
+                  </button>
+                )}
               </div>
             </div>
             

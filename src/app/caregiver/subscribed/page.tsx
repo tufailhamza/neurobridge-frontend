@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import CaregiverSidebar from '../sidebar';
 import { Clinician } from '@/types/Clinician';
 import { clinicianTypes, specializations } from '@/data/config';
+import { env } from '@/config/env';
 
 export default function SubscribedPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'subscribed' | 'discover'>('subscribed');
   const [searchQuery, setSearchQuery] = useState('');
   const [subscribedClinicians, setSubscribedClinicians] = useState<Clinician[]>([]);
@@ -13,7 +16,18 @@ export default function SubscribedPage() {
   const [selectedClinicianType, setSelectedClinicianType] = useState<string>('all');
   const [selectedSpecialization, setSelectedSpecialization] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [discoverLoading, setDiscoverLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [subscribingClinicians, setSubscribingClinicians] = useState<Set<string>>(new Set());
+  const [unsubscribingClinicians, setUnsubscribingClinicians] = useState<Set<string>>(new Set());
+
+  // Handle URL parameter for tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'discover') {
+      setActiveTab('discover');
+    }
+  }, [searchParams]);
 
   // Fetch subscribed clinicians from backend API
   useEffect(() => {
@@ -36,7 +50,7 @@ export default function SubscribedPage() {
         }
 
         // Fetch subscribed clinicians for the current caregiver
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/clinicians/subscribed/${user.user_id}`, {
+        const response = await fetch(`${env.BACKEND_URL}/clinicians/subscribed/${user.user_id}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -75,6 +89,7 @@ export default function SubscribedPage() {
   useEffect(() => {
     const fetchDiscoverClinicians = async () => {
       try {
+        setDiscoverLoading(true);
         // Get user info from localStorage
         const userInfo = localStorage.getItem('user_info');
         if (!userInfo) {
@@ -89,7 +104,7 @@ export default function SubscribedPage() {
         }
 
         // Fetch discover clinicians (clinicians not yet subscribed)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/clinicians/unsubscribed/${user.user_id}`, {
+        const response = await fetch(`${env.BACKEND_URL}/clinicians/unsubscribed/${user.user_id}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -103,27 +118,116 @@ export default function SubscribedPage() {
       } catch (err) {
         console.error('Error fetching discover clinicians:', err);
         // Don't set error for discover clinicians as it's not critical
+      } finally {
+        setDiscoverLoading(false);
       }
     };
 
     fetchDiscoverClinicians();
   }, []);
 
-  const handleDelete = (clinicianId: string) => {
-    setSubscribedClinicians(prev => prev.filter(c => c.user_id !== clinicianId));
+  const handleDelete = async (clinicianId: string) => {
+    try {
+      setUnsubscribingClinicians(prev => new Set(prev).add(clinicianId));
+      
+      const userInfo = localStorage.getItem('user_info');
+      const user = JSON.parse(userInfo || '{}');
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!accessToken) {
+        throw new Error('No access token found');
+      }
+
+      // Make API call to unsubscribe
+      const response = await fetch(`${env.BACKEND_URL}/clinicians/unsubscribe`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caregiver_id: user.user_id,
+          clinician_id: clinicianId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to unsubscribe: ${response.status}`);
+      }
+
+      // Update local state
+      setSubscribedClinicians(prev => prev.filter(c => c.user_id !== clinicianId));
+      
+      // Add back to discover list
+      const deletedClinician = subscribedClinicians.find(c => c.user_id === clinicianId);
+      if (deletedClinician) {
+        setDiscoverCliniciansList(prev => [...prev, { ...deletedClinician, is_subscribed: false }]);
+      }
+      
+    } catch (error) {
+      console.error('Error unsubscribing from clinician:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setUnsubscribingClinicians(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(clinicianId);
+        return newSet;
+      });
+    }
   };
 
   const handleMessage = (clinicianId: string) => {
-    console.log('Opening message with clinician:', clinicianId);
+    // Navigate to messages page with the selected clinician
+    window.location.href = `/caregiver/messages?clinician=${clinicianId}`;
   };
 
-  const handleSubscribe = (clinicianId: string) => {
-    const clinicianToSubscribe = discoverCliniciansList.find(c => c.user_id === clinicianId);
-    if (clinicianToSubscribe) {
-      // Add to subscribed list
-      setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, is_subscribed: true }]);
-      // Remove from discover list
-      setDiscoverCliniciansList(prev => prev.filter(c => c.user_id !== clinicianId));
+  const handleSubscribe = async (clinicianId: string) => {
+    try {
+      setSubscribingClinicians(prev => new Set(prev).add(clinicianId));
+      
+      const userInfo = localStorage.getItem('user_info');
+      const user = JSON.parse(userInfo || '{}');
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!accessToken) {
+        throw new Error('No access token found');
+      }
+
+      // Make API call to subscribe
+      const response = await fetch(`${env.BACKEND_URL}/clinicians/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caregiver_id: user.user_id,
+          clinician_id: clinicianId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to subscribe: ${response.status}`);
+      }
+
+      // Update local state
+      const clinicianToSubscribe = discoverCliniciansList.find(c => c.user_id === clinicianId);
+      if (clinicianToSubscribe) {
+        // Add to subscribed list
+        setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, is_subscribed: true }]);
+        // Remove from discover list
+        setDiscoverCliniciansList(prev => prev.filter(c => c.user_id !== clinicianId));
+      }
+      
+    } catch (error) {
+      console.error('Error subscribing to clinician:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setSubscribingClinicians(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(clinicianId);
+        return newSet;
+      });
     }
   };
 
@@ -135,13 +239,34 @@ export default function SubscribedPage() {
     const fullName = `${clinician.first_name || ''} ${clinician.last_name || ''}`.toLowerCase();
     const searchLower = searchQuery.toLowerCase();
     
-    return fullName.includes(searchLower) ||
+    // Search filter
+    const matchesSearch = fullName.includes(searchLower) ||
            (clinician.specialty || '').toLowerCase().includes(searchLower) ||
            (clinician.area_of_expertise || '').toLowerCase().includes(searchLower);
+    
+    if (!matchesSearch) return false;
+    
+    // Clinician type filter (only apply if not 'all' and we're on discover tab)
+    if (activeTab === 'discover' && selectedClinicianType !== 'all') {
+      const clinicianType = clinician.clinician_type || '';
+      if (!clinicianType.toLowerCase().includes(selectedClinicianType.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Specialization filter (only apply if not 'all' and we're on discover tab)
+    if (activeTab === 'discover' && selectedSpecialization !== 'all') {
+      const areaOfExpertise = clinician.area_of_expertise || '';
+      if (!areaOfExpertise.toLowerCase().includes(selectedSpecialization.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    return true;
   });
 
   // Show loading state
-  if (loading && activeTab === 'subscribed') {
+  if (loading || (activeTab === 'discover' && discoverLoading)) {
     return (
       <div className="h-screen bg-d">
         <CaregiverSidebar />
@@ -153,7 +278,7 @@ export default function SubscribedPage() {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading subscribed clinicians...</p>
+                <p className="text-gray-600">Loading clinicians...</p>
               </div>
             </div>
           </div>
@@ -163,7 +288,7 @@ export default function SubscribedPage() {
   }
 
   // Show error state
-  if (error && activeTab === 'subscribed') {
+  if (error) {
     return (
       <div className="h-screen bg-d">
         <CaregiverSidebar />
@@ -209,7 +334,7 @@ export default function SubscribedPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Subscribed
+              Subscribed ({subscribedClinicians.length})
             </button>
             <button
               onClick={() => setActiveTab('discover')}
@@ -333,7 +458,7 @@ export default function SubscribedPage() {
                       {/* Message Button */}
                       <button
                         onClick={() => handleMessage(clinician.user_id)}
-                        className=" text-b border-2 border-b px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors flex items-center space-x-2"
+                        className="text-b border-2 border-b px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors flex items-center space-x-2"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -344,23 +469,41 @@ export default function SubscribedPage() {
                       {/* Delete Button */}
                       <button
                         onClick={() => handleDelete(clinician.user_id)}
-                        className=" text-b p-2 rounded-lg"
+                        disabled={unsubscribingClinicians.has(clinician.user_id)}
+                        className={`text-b p-2 rounded-lg transition-colors ${
+                          unsubscribingClinicians.has(clinician.user_id)
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-gray-100'
+                        }`}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        {unsubscribingClinicians.has(clinician.user_id) ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-b"></div>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
                       </button>
                     </>
                   ) : (
                     /* Subscribe Button for Discover Tab */
                     <button
                       onClick={() => handleSubscribe(clinician.user_id)}
-                      className="bg-b text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors flex items-center space-x-2"
+                      disabled={subscribingClinicians.has(clinician.user_id)}
+                      className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                        subscribingClinicians.has(clinician.user_id)
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-b text-white hover:bg-opacity-90'
+                      }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      <span>Subscribe</span>
+                      {subscribingClinicians.has(clinician.user_id) ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      )}
+                      <span>{subscribingClinicians.has(clinician.user_id) ? 'Subscribing...' : 'Subscribe'}</span>
                     </button>
                   )}
                 </div>

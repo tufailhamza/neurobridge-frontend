@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { FeedCard as FeedCardType } from '@/types/FeedCard';
 import { useRouter } from 'next/navigation';
+import { env } from '@/config/env';
 
 interface FeedCardProps {
   card: FeedCardType;
@@ -9,6 +11,31 @@ interface FeedCardProps {
 
 export default function FeedCard({ card }: FeedCardProps) {
   const router = useRouter();
+  const [hasPurchased, setHasPurchased] = useState(false);
+  const [loadingPurchaseStatus, setLoadingPurchaseStatus] = useState(true);
+
+  useEffect(() => {
+    const checkPurchaseStatus = async () => {
+      try {
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const userId = userInfo.user_id || userInfo.id;
+        
+        if (userId) {
+          const response = await fetch(`${env.BACKEND_URL}/stripe/purchases/check/${userId}/${card.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setHasPurchased(data.hasAccess);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking purchase status:', error);
+      } finally {
+        setLoadingPurchaseStatus(false);
+      }
+    };
+
+    checkPurchaseStatus();
+  }, [card.id]);
 
   const handleCardClick = () => {
     // Determine the route based on user role (you can get this from localStorage or context)
@@ -81,9 +108,19 @@ export default function FeedCard({ card }: FeedCardProps) {
             </span>
           ))}
         </div>
-        <button className="px-4 py-2 bg-a text-white rounded-lg font-medium hover:bg-a-hover transition-colors">
-          {card.price === 0 ? 'Free' : `$${card.price}`}
-        </button>
+        {loadingPurchaseStatus ? (
+          <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-lg font-medium">
+            Loading...
+          </div>
+        ) : hasPurchased ? (
+          <div className="px-4 py-2 border-2 border-blue-700 text-blue-600 rounded-lg font-medium bg-white">
+            Purchased
+          </div>
+        ) : (
+          <button className="px-4 py-2 bg-a text-white rounded-lg font-medium hover:bg-a-hover transition-colors">
+            {card.price === 0 ? 'Free' : `$${card.price}`}
+          </button>
+        )}
       </div>
 
     </div>

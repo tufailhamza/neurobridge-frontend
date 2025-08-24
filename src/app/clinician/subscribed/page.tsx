@@ -114,7 +114,8 @@ export default function SubscribedPage() {
   };
 
   const handleMessage = (clinicianId: string) => {
-    console.log('Opening message with clinician:', clinicianId);
+    // Navigate to messages page with the selected clinician
+    window.location.href = `/clinician/messages?clinician=${clinicianId}`;
   };
 
   const handleSubscribe = (clinicianId: string) => {
@@ -135,9 +136,30 @@ export default function SubscribedPage() {
     const fullName = `${clinician.first_name || ''} ${clinician.last_name || ''}`.toLowerCase();
     const searchLower = searchQuery.toLowerCase();
     
-    return fullName.includes(searchLower) ||
+    // Search filter
+    const matchesSearch = fullName.includes(searchLower) ||
            (clinician.specialty || '').toLowerCase().includes(searchLower) ||
            (clinician.area_of_expertise || '').toLowerCase().includes(searchLower);
+    
+    if (!matchesSearch) return false;
+    
+    // Clinician type filter (only apply if not 'all' and we're on discover tab)
+    if (activeTab === 'discover' && selectedClinicianType !== 'all') {
+      const clinicianType = clinician.clinician_type || '';
+      if (!clinicianType.toLowerCase().includes(selectedClinicianType.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Specialization filter (only apply if not 'all' and we're on discover tab)
+    if (activeTab === 'discover' && selectedSpecialization !== 'all') {
+      const areaOfExpertise = clinician.area_of_expertise || '';
+      if (!areaOfExpertise.toLowerCase().includes(selectedSpecialization.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    return true;
   });
 
   // Show loading state
@@ -209,7 +231,7 @@ export default function SubscribedPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Subscribed
+              Subscribed ({subscribedClinicians.length})
             </button>
             <button
               onClick={() => setActiveTab('discover')}

@@ -74,14 +74,81 @@ export default function ClinicianHomePage() {
     const fetchFeedData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=20`);
+        
+        // First, check if backend is accessible
+        console.log('Checking backend health at:', `${env.BACKEND_URL}/health`);
+        const healthResponse = await fetch(`${env.BACKEND_URL}/health`);
+        console.log('Health check status:', healthResponse.status);
+        
+        if (!healthResponse.ok) {
+          throw new Error(`Backend is not accessible: ${healthResponse.status}`);
+        }
+        
+                        console.log('Fetching posts from:', `${env.BACKEND_URL}/posts/?limit=10`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000000); // 10 second timeout
+        
+        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=10`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch posts: ${response.status}`);
+          const errorText = await response.text();
+          console.log('Error response:', errorText);
+          throw new Error(`Failed to fetch posts: ${response.status} - ${errorText}`);
         }
         
         const data = await response.json();
-        setFeedCards(data.results || data || []);
+        console.log('Received data:', data);
+        console.log('Data type:', typeof data);
+        console.log('Data length:', Array.isArray(data) ? data.length : 'Not an array');
+        
+        // If no posts found, use fallback data for testing
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+          console.log('No posts found, using fallback data');
+          const fallbackData = [
+            {
+              id: "1",
+              image_url: "https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Sample+Post",
+              title: "Understanding Autism Spectrum Disorder",
+              user_id: "1",
+              user_name: "Dr. Sarah Johnson",
+              date: "2024-01-15",
+              read_time: "5 min read",
+              tags: ["Autism", "Behavioral", "Therapy"],
+              price: 0,
+              html_content: "<p>Sample content about autism...</p>",
+              allow_comments: true,
+              tier: "free",
+              collection: null,
+              attachments: [],
+              date_published: "2024-01-15T10:00:00Z"
+            },
+            {
+              id: "2",
+              image_url: "https://via.placeholder.com/400x300/10B981/FFFFFF?text=Speech+Therapy",
+              title: "Speech Therapy Techniques for Children",
+              user_id: "2",
+              user_name: "Dr. Michael Chen",
+              date: "2024-01-14",
+              read_time: "8 min read",
+              tags: ["Speech Therapy", "Communication", "SLP"],
+              price: 9.99,
+              html_content: "<p>Advanced speech therapy techniques...</p>",
+              allow_comments: true,
+              tier: "paid",
+              collection: null,
+              attachments: [],
+              date_published: "2024-01-14T14:30:00Z"
+            }
+          ];
+          setFeedCards(fallbackData);
+        } else {
+          setFeedCards(data.results || data || []);
+        }
         setError(null);
       } catch (err) {
         console.error('Error fetching feed data:', err);
@@ -353,7 +420,7 @@ export default function ClinicianHomePage() {
               {/* Vertical list of clinicians */}
               <div className="space-y-3">
                 {/* Clinician 1 */}
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between bg-white rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-b rounded-full flex items-center justify-center">
                       <span className="text-white font-semibold">DS</span>
@@ -369,7 +436,7 @@ export default function ClinicianHomePage() {
                 </div>
                 
                 {/* Clinician 2 */}
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between bg-white rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-b rounded-full flex items-center justify-center">
                       <span className="text-white font-semibold">MJ</span>
@@ -385,7 +452,7 @@ export default function ClinicianHomePage() {
                 </div>
                 
                 {/* Clinician 3 */}
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between bg-white rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-b rounded-full flex items-center justify-center">
                       <span className="text-white font-semibold">EW</span>

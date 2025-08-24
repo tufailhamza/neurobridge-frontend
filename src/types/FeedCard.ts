@@ -14,4 +14,5 @@ export interface FeedCard {
   collection: string | null;
   attachments: string[];
   date_published: string;
+  stripe_price_id?: string; // Stripe Price ID for this content
 } 

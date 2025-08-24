@@ -114,25 +114,42 @@ export default function LibraryPage() {
           throw new Error('No access token found');
         }
 
+        console.log('Fetching posts for user:', user.user_id);
+        console.log('Backend URL:', env.BACKEND_URL);
+        
+        const apiUrl = `${env.BACKEND_URL}/posts/user/${user.user_id}?skip=${(currentPage - 1) * postsPerPage}&limit=${postsPerPage}`;
+        console.log('API URL:', apiUrl);
+
         // Fetch posts for the current user
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/posts/user/${user.user_id}?skip=${(currentPage - 1) * postsPerPage}&limit=${postsPerPage}`, {
+        const response = await fetch(apiUrl, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+
         if (!response.ok) {
           if (response.status === 401) {
             throw new Error('Unauthorized. Please log in again.');
           } else if (response.status === 403) {
             throw new Error('Access forbidden. Please check your permissions.');
+          } else if (response.status === 404) {
+            // No posts found - this is not an error, just empty state
+            console.log('No posts found (404)');
+            setPosts([]);
+            return;
           } else {
-            throw new Error(`Failed to fetch posts: ${response.status}`);
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            throw new Error(`Failed to fetch posts: ${response.status} - ${errorText}`);
           }
         }
 
         const data = await response.json();
+        console.log('Posts data received:', data);
         setPosts(data || []);
       } catch (err) {
         console.error('Error fetching user posts:', err);
@@ -143,6 +160,21 @@ export default function LibraryPage() {
       }
     };
 
+    // Test backend connection first
+    const testBackend = async () => {
+      try {
+        const testResponse = await fetch(`${env.BACKEND_URL}/posts/test`);
+        console.log('Backend test response:', testResponse.status);
+        if (testResponse.ok) {
+          const testData = await testResponse.json();
+          console.log('Backend test data:', testData);
+        }
+      } catch (error) {
+        console.error('Backend test failed:', error);
+      }
+    };
+    
+    testBackend();
     fetchUserPosts();
     loadDrafts(); // Load drafts when component mounts
     fetchUserCollections(); // Load collections when component mounts
@@ -299,6 +331,10 @@ export default function LibraryPage() {
           throw new Error('Unauthorized. Please log in again.');
         } else if (response.status === 403) {
           throw new Error('Access forbidden. Please check your permissions.');
+        } else if (response.status === 404) {
+          // No posts found - this is not an error, just empty state
+          setPosts([]);
+          return;
         } else {
           throw new Error(`Failed to fetch posts: ${response.status}`);
         }
@@ -372,11 +408,27 @@ export default function LibraryPage() {
                   <span>+  Create Collection</span>
                 </button>
               ) : (
-                <button 
-                  onClick={() => router.push('/clinician/library/create-post')}
-                  className="bg-a text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
-                  <span>+  Create Post</span>
-                </button>
+                <>
+                  <button 
+                    onClick={refreshPosts}
+                    disabled={refreshing}
+                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    {refreshing ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    )}
+                    <span>Refresh</span>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/clinician/library/create-post')}
+                    className="bg-a text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                    <span>+  Create Post</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -605,7 +657,7 @@ export default function LibraryPage() {
                             </td>
                             <td className="py-4 whitespace-nowrap">
                               <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full text-gray-600">
-                                {item.access || item.tier}
+                                {item.tier || item.access || 'public'}
                               </span>
                             </td>
                             <td className="py-4 whitespace-nowrap">

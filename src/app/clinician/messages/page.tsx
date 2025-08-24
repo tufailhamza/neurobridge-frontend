@@ -15,9 +15,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ClinicianSidebar from '../sidebar';
-import { Search, Filter, Star, Phone, Video, MoreHorizontal, Mic, Send, Archive, X, RefreshCw } from 'lucide-react';
+import { Search, Filter, Star, Send, Archive, X, MoreVertical } from 'lucide-react';
 import PubNubService, { PubNubMessage } from '../../../services/pubnub';
 import { env } from '../../../config/env';
+import { useSearchParams } from 'next/navigation';
 
 interface Message {
     id: string;
@@ -36,6 +37,7 @@ interface Contact {
     time: string;
     isStarred: boolean;
     lastMessageTime?: number;
+    unreadCount?: number; // Number of unread messages
 }
 
 export default function MessagesPage() {
@@ -46,6 +48,18 @@ export default function MessagesPage() {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>('');
     
+    // Create Message functionality states
+    const [isCreateMessageMode, setIsCreateMessageMode] = useState(false);
+    const [clinicians, setClinicians] = useState<any[]>([]);
+    const [filteredClinicians, setFilteredClinicians] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showClinicianDropdown, setShowClinicianDropdown] = useState(false);
+    const [isLoadingClinicians, setIsLoadingClinicians] = useState(false);
+    
+    // URL parameters for auto-opening conversations
+    const searchParams = useSearchParams();
+    const clinicianIdFromUrl = searchParams.get('clinician');
+    
     // Refs for PubNub service
     const pubnubService = useRef<PubNubService | null>(null);
     
@@ -54,7 +68,7 @@ export default function MessagesPage() {
         try {
             const userInfo = localStorage.getItem('user_info');
             const userId = JSON.parse(userInfo || '{}').user_id;
-            return userId;
+            return String(userId); // Ensure it's always a string
         } catch (error) {
             console.warn('Failed to get user ID from localStorage:', error);
             return '1'; // fallback
@@ -149,16 +163,22 @@ export default function MessagesPage() {
     };
 
     // Function to add or update a contact
-    const addOrUpdateContact = (contact: Contact, lastMessage?: string, lastMessageTime?: number) => {
+    const addOrUpdateContact = (contact: Contact, lastMessage?: string, lastMessageTime?: number, isUnread: boolean = false) => {
         setContacts(prevContacts => {
             const existingIndex = prevContacts.findIndex(c => c.id === contact.id);
             let updatedContact: Contact;
 
             if (existingIndex >= 0) {
+                const currentContact = prevContacts[existingIndex];
+                const currentUnreadCount = currentContact.unreadCount || 0;
+                
                 updatedContact = {
-                    ...prevContacts[existingIndex],
-                    lastMessage: lastMessage || prevContacts[existingIndex].lastMessage,
-                    lastMessageTime: lastMessageTime || prevContacts[existingIndex].lastMessageTime || Date.now()
+                    ...currentContact,
+                    lastMessage: lastMessage || currentContact.lastMessage,
+                    lastMessageTime: lastMessageTime || currentContact.lastMessageTime || Date.now(),
+                    unreadCount: isUnread && selectedContact?.id !== contact.id 
+                        ? currentUnreadCount + 1 
+                        : currentUnreadCount
                 };
                 
                 const newContacts = [...prevContacts];
@@ -172,7 +192,8 @@ export default function MessagesPage() {
                 const newContact: Contact = {
                     ...contact,
                     lastMessage: lastMessage || '',
-                    lastMessageTime: lastMessageTime || Date.now()
+                    lastMessageTime: lastMessageTime || Date.now(),
+                    unreadCount: isUnread ? 1 : 0
                 };
                 
                 const newContacts = [newContact, ...prevContacts];
@@ -184,22 +205,50 @@ export default function MessagesPage() {
 
     // Function to handle incoming message from global channel
     const handleIncomingMessage = (pubnubMessage: PubNubMessage) => {
-        // Extract sender and receiver IDs from the message
-        const { senderId, senderName, receiverId, text, timestamp } = pubnubMessage;
+        console.log('📨 Received message from PubNub:', pubnubMessage);
+        
+        // Extract sender and receiver IDs from the message and ensure they are strings
+        const senderId = String(pubnubMessage.senderId || '');
+        const receiverId = String(pubnubMessage.receiverId || '');
+        const { senderName, text, timestamp } = pubnubMessage;
         
         // Only process messages where this clinician is the receiver
-        // Assuming clinician ID is stored somewhere (you'll need to set this)
-        const currentClinicianId = getCurrentUserId();
+        const currentClinicianId = String(getCurrentUserId()); // Ensure it's a string
         
-        if (receiverId === currentClinicianId) {
+        console.log('🔍 Processing message - Sender:', senderId, 'Receiver:', receiverId, 'Current User:', currentClinicianId);
+        console.log('🔍 Type check - senderId type:', typeof senderId, 'receiverId type:', typeof receiverId, 'currentClinicianId type:', typeof currentClinicianId);
+        console.log('🔍 Raw values - senderId:', senderId, 'receiverId:', receiverId, 'currentClinicianId:', currentClinicianId);
+        console.log('🔍 String conversion - String(senderId):', String(senderId), 'String(receiverId):', String(receiverId), 'String(currentClinicianId):', String(currentClinicianId));
+        console.log('🔍 Comparison check - receiverId === currentClinicianId:', receiverId === currentClinicianId);
+        console.log('🔍 String comparison - String(receiverId) === String(currentClinicianId):', String(receiverId) === String(currentClinicianId));
+        console.log('🔍 Length check - receiverId.length:', String(receiverId).length, 'currentClinicianId.length:', String(currentClinicianId).length);
+        console.log('🔍 Character by character check:');
+        const receiverStr = String(receiverId);
+        const currentStr = String(currentClinicianId);
+        for (let i = 0; i < Math.max(receiverStr.length, currentStr.length); i++) {
+            console.log(`  Position ${i}: receiverId[${i}] = "${receiverStr[i]}" (${receiverStr.charCodeAt(i)}), currentClinicianId[${i}] = "${currentStr[i]}" (${currentStr.charCodeAt(i)})`);
+        }
+        
+        // Skip if this is our own message (we already handled it in sendMessage)
+        if (senderId === currentClinicianId) {
+            console.log('⏭️ Skipping own message');
+            return;
+        }
+        
+        if (receiverStr === currentStr) {
+            console.log('✅ This message is for us!');
             // This message is for us
             const caregiverId = parseInt(senderId || '0');
+            const isUnread = selectedContact?.id !== caregiverId; // Mark as unread if not current contact
             
             if (caregiverId > 0) { // Only proceed if we have a valid ID
+                console.log('👥 Processing message from caregiver:', caregiverId);
+                
                 // Check if we already have this contact
                 let contact = contacts.find(c => c.id === caregiverId);
                 
                 if (!contact) {
+                    console.log('🆕 Creating new contact for caregiver:', caregiverId);
                     // Create new contact for this caregiver using senderName from message
                     const sendername = senderName || `Caregiver ${senderId}`;
                     contact = {
@@ -212,32 +261,55 @@ export default function MessagesPage() {
                         lastMessageTime: timestamp
                     };
                     
-                    addOrUpdateContact(contact);
+                    addOrUpdateContact(contact, text, timestamp, isUnread);
                 } else {
+                    console.log('📝 Updating existing contact for caregiver:', caregiverId);
                     // Update existing contact
-                    addOrUpdateContact(contact, text, timestamp);
+                    addOrUpdateContact(contact, text, timestamp, isUnread);
                 }
                 
-                // Add message to messages state
+                // Add message to messages state immediately
                 const newMessage: Message = {
                     id: pubnubMessage.id,
-                    sender: pubnubMessage.sender,
+                    sender: pubnubMessage.sender || senderName || `Caregiver ${senderId}`,
                     text: pubnubMessage.text,
                     time: formatTimestamp(pubnubMessage.timestamp),
-                    senderId: senderId || '',
-                    receiverId: receiverId || ''
+                    senderId: senderId, // Already a string
+                    receiverId: receiverId // Already a string
                 };
                 
-                setMessages(prev => ({
+                console.log('💬 Adding received message to UI:', newMessage);
+                
+                setMessages(prev => {
+                    const currentMessages = prev[caregiverId] || [];
+                    // Check if message already exists to avoid duplicates
+                    const messageExists = currentMessages.some(msg => msg.id === pubnubMessage.id);
+                    if (messageExists) {
+                        console.log('⚠️ Message already exists, skipping duplicate');
+                        return prev;
+                    }
+                    
+                    const updatedMessages = [...currentMessages, newMessage];
+                    console.log('📱 Updated messages for caregiver', caregiverId, ':', updatedMessages.length, 'messages');
+                    
+                    return {
                     ...prev,
-                    [caregiverId]: [...(prev[caregiverId] || []), newMessage]
-                }));
+                        [caregiverId]: updatedMessages
+                    };
+                });
             }
+        } else {
+            console.log('❌ Message not for us, ignoring');
+            console.log('❌ Debug - receiverId:', receiverId, 'currentClinicianId:', currentClinicianId, 'types:', typeof receiverId, typeof currentClinicianId);
+            console.log('❌ Final comparison failed - String(receiverId):', String(receiverId), 'String(currentClinicianId):', String(currentClinicianId));
         }
     };
 
     // Initialize PubNub service and subscribe to global channel
     useEffect(() => {
+        console.log('Initializing clinician messages page...');
+        console.log('URL parameter clinicianIdFromUrl:', clinicianIdFromUrl);
+        
         // Load contacts from localStorage
         const storedContacts = loadContactsFromStorage();
         if (storedContacts.length > 0) {
@@ -259,6 +331,11 @@ export default function MessagesPage() {
             console.log('Subscribed to global channel:', globalChannel);
         }
 
+        // Auto-open conversation if clinician ID is in URL
+        if (clinicianIdFromUrl) {
+            console.log('Found clinician ID in URL, will auto-open conversation');
+        }
+
         // Cleanup on unmount
         return () => {
             if (pubnubService.current) {
@@ -272,7 +349,24 @@ export default function MessagesPage() {
         if (currentUserId && pubnubService.current) {
             loadExistingMessagesAndContacts();
         }
+
+        // Auto-open conversation if caregiver ID is in URL (fallback for empty contacts)
+        if (clinicianIdFromUrl && currentUserId && pubnubService.current && contacts.length === 0) {
+            console.log('Auto-opening conversation with empty contacts...');
+            autoOpenConversation(clinicianIdFromUrl);
+        }
     }, [currentUserId]);
+
+    // Handle URL parameter changes
+    useEffect(() => {
+        if (clinicianIdFromUrl && currentUserId && pubnubService.current && contacts.length > 0) {
+            console.log('URL parameter detected, auto-opening conversation...');
+            autoOpenConversation(clinicianIdFromUrl);
+        }
+    }, [clinicianIdFromUrl, currentUserId, contacts.length]);
+
+    // Remove periodic refresh - rely on real-time PubNub messaging
+    // The system will now work purely through real-time message delivery
 
     // Function to load existing messages and create contacts
     const loadExistingMessagesAndContacts = async () => {
@@ -403,55 +497,235 @@ export default function MessagesPage() {
     const handleContactClick = async (contact: Contact) => {
         setSelectedContact(contact);
         
+        // Clear unread count for this contact
+        setContacts(prevContacts => {
+            const updatedContacts = prevContacts.map(c => 
+                c.id === contact.id ? { ...c, unreadCount: 0 } : c
+            );
+            saveContactsToStorage(updatedContacts);
+            return updatedContacts;
+        });
+        
         // Load conversation for this contact if not already loaded
         if (!messages[contact.id] || messages[contact.id].length === 0) {
             await loadConversationForContact(contact);
         }
     };
 
+    // Function to auto-open conversation with clinician from URL
+    const autoOpenConversation = async (clinicianId: string) => {
+        try {
+            console.log('Attempting to auto-open conversation with clinician:', clinicianId);
+            
+            // Fetch the specific clinician by user_id from the new backend route
+            const response = await fetch(`${env.BACKEND_URL}/clinicians/clinicians/${clinicianId}`);
+            
+            if (response.ok) {
+                const clinician = await response.json();
+                console.log('Found clinician:', clinician);
+                
+                // Use the existing handleClinicianSelect function
+                await handleClinicianSelect(clinician);
+                
+                console.log('Auto-opened conversation with clinician:', clinicianId);
+            } else if (response.status === 404) {
+                console.error('Clinician not found:', clinicianId);
+            } else {
+                console.error('Failed to fetch clinician:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.error('Error auto-opening conversation:', error);
+        }
+    };
+
+    // Monitor messages state changes for debugging
+    useEffect(() => {
+        console.log('🔄 Messages state updated:', messages);
+        if (selectedContact) {
+            console.log('📱 Current contact messages:', messages[selectedContact.id]?.length || 0, 'messages');
+        }
+    }, [messages, selectedContact]);
+
     // Function to send a message
     const sendMessage = async () => {
         if (!messageInput.trim() || !selectedContact) return;
 
         setIsLoading(true);
+        const originalInput = messageInput;
         const messageText = messageInput.trim();
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log('🚀 Starting to send message:', messageText);
+        console.log('📝 Temp ID:', tempId);
+        console.log('👤 Selected contact:', selectedContact.id);
+        
+        // Ensure all IDs are strings
+        const senderIdStr = String(currentUserId);
+        const receiverIdStr = String(selectedContact.id);
+        
+        console.log('🔍 ID Type Check - currentUserId type:', typeof currentUserId, 'value:', currentUserId);
+        console.log('🔍 ID Type Check - selectedContact.id type:', typeof selectedContact.id, 'value:', selectedContact.id);
+        console.log('🔍 ID Type Check - senderIdStr type:', typeof senderIdStr, 'value:', senderIdStr);
+        console.log('🔍 ID Type Check - receiverIdStr type:', typeof receiverIdStr, 'value:', receiverIdStr);
         
         try {
+            // Clear input immediately for better UX
             setMessageInput('');
+            
+            // Create the message object immediately for instant display
+            const tempMessage: Message = {
+                id: tempId,
+                sender: 'Me',
+                text: messageText,
+                time: formatTimestamp(Date.now()),
+                senderId: senderIdStr,
+                receiverId: receiverIdStr
+            };
+            
+            console.log('📤 Adding temp message to UI:', tempMessage);
+            
+            // Add message to UI immediately
+            setMessages(prevMessages => {
+                const currentMessages = prevMessages[selectedContact.id] || [];
+                const newMessages = [...currentMessages, tempMessage];
+                console.log('📱 Updated messages for contact', selectedContact.id, ':', newMessages.length, 'messages');
+                return {
+                    ...prevMessages,
+                    [selectedContact.id]: newMessages
+                };
+            });
+            
+            console.log('📡 Sending message to PubNub...');
             
             if (pubnubService.current) {
                 const globalChannel = 'global_messages';
                 const sentMessage = await pubnubService.current.sendMessage(globalChannel, {
                     sender: 'Me',
                     text: messageText,
-                    senderId: currentUserId.toString(), // Ensure it's a string
-                    receiverId: selectedContact.id.toString(), // Ensure it's a string
+                    senderId: senderIdStr, // Use string version
+                    receiverId: receiverIdStr, // Use string version
                     senderName: getCurrentUserName() // Add sender name
                 });
 
+                console.log('✅ Message sent successfully:', sentMessage);
+
                 if (sentMessage) {
-                    const newMessage: Message = {
+                    console.log('🔄 Replacing temp message with real message...');
+                    // Replace temp message with real message
+                    setMessages(prevMessages => {
+                        const currentMessages = prevMessages[selectedContact.id] || [];
+                        const updatedMessages = currentMessages.map(msg => 
+                            msg.id === tempId
+                                ? {
                         id: sentMessage.id,
                         sender: sentMessage.sender,
                         text: sentMessage.text,
                         time: formatTimestamp(sentMessage.timestamp),
-                        senderId: currentUserId.toString(), // Ensure it's a string
-                        receiverId: selectedContact.id.toString() // Ensure it's a string
-                    };
-                    
-                    setMessages(prev => ({
-                        ...prev,
-                        [selectedContact.id]: [...(prev[selectedContact.id] || []), newMessage]
-                    }));
+                                    senderId: senderIdStr, // Use string version
+                                    receiverId: String(sentMessage.receiverId || receiverIdStr) // Ensure string
+                                }
+                                : msg
+                        );
+                        
+                        console.log('✅ Messages updated for contact', selectedContact.id, ':', updatedMessages.length, 'messages');
+                        
+                        return {
+                            ...prevMessages,
+                            [selectedContact.id]: updatedMessages
+                        };
+                    });
 
                     addOrUpdateContact(selectedContact, messageText, sentMessage.timestamp);
                 }
             }
         } catch (error) {
-            console.error('Failed to send message:', error);
+            console.error('❌ Failed to send message:', error);
+            // Restore input if sending fails
+            setMessageInput(originalInput);
+            // Remove the temp message if sending failed
+            setMessages(prevMessages => {
+                const currentMessages = prevMessages[selectedContact.id] || [];
+                const filteredMessages = currentMessages.filter(msg => msg.id !== tempId);
+                console.log('🗑️ Removed temp message due to error');
+                return {
+                    ...prevMessages,
+                    [selectedContact.id]: filteredMessages
+                };
+            });
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // Function to fetch clinicians from API
+    const fetchClinicians = async () => {
+        setIsLoadingClinicians(true);
+        try {
+            const response = await fetch(`${env.BACKEND_URL}/clinicians/clinicians`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Fetched clinicians from API:', data.map((c: any) => ({ id: c.user_id, name: `${c.first_name} ${c.last_name}` })));
+                setClinicians(data);
+                setFilteredClinicians(data);
+            } else {
+                console.error('Failed to fetch clinicians');
+            }
+        } catch (error) {
+            console.error('Error fetching clinicians:', error);
+        } finally {
+            setIsLoadingClinicians(false);
+        }
+    };
+
+    // Function to filter clinicians based on search query
+    const filterClinicians = (query: string) => {
+        if (!query.trim()) {
+            setFilteredClinicians(clinicians);
+            return;
+        }
+        
+        const filtered = clinicians.filter((clinician: any) => 
+            clinician.first_name.toLowerCase().includes(query.toLowerCase()) ||
+            clinician.last_name.toLowerCase().includes(query.toLowerCase()) ||
+            clinician.specialty?.toLowerCase().includes(query.toLowerCase()) ||
+            clinician.clinician_type?.toLowerCase().includes(query.toLowerCase()) ||
+            clinician.city?.toLowerCase().includes(query.toLowerCase()) ||
+            clinician.state?.toLowerCase().includes(query.toLowerCase())
+        );
+        setFilteredClinicians(filtered);
+    };
+
+    // Function to handle search input changes
+    const handleSearchChange = (query: string) => {
+        setSearchQuery(query);
+        filterClinicians(query);
+        setShowClinicianDropdown(true);
+    };
+
+    // Function to handle clinician selection
+    const handleClinicianSelect = async (clinician: any) => {
+        // Create a new contact for this clinician
+        const newContact: Contact = {
+            id: parseInt(clinician.user_id),
+            name: `${clinician.prefix} ${clinician.first_name} ${clinician.last_name}`,
+            avatar: clinician.profile_image || '/avatar-default.jpg',
+            lastMessage: '',
+            time: 'Now',
+            isStarred: false,
+            lastMessageTime: Date.now()
+        };
+        
+        // Add to contacts
+        addOrUpdateContact(newContact);
+        
+        // Select this contact and exit create message mode
+        setSelectedContact(newContact);
+        setIsCreateMessageMode(false);
+        setSearchQuery('');
+        setShowClinicianDropdown(false);
+        
+        // Handle the contact click to set up messaging and load history
+        await handleContactClick(newContact);
     };
 
     return (
@@ -459,16 +733,9 @@ export default function MessagesPage() {
             <ClinicianSidebar />
             
             <div className="ml-64 h-full flex flex-col overflow-hidden">
-                <div className="p-4 bg-white flex justify-between items-center border-gray-200">
-                    <h2 className="text-3xl font-semibold text-b">Messages</h2>
+                <div className="pt-4 pr-4 pb-6 bg-white flex justify-between items-center">
+                    <h2 className="text-4xl font-black text-b">Messages</h2>
                     <div className="flex items-center space-x-4">
-                        <button 
-                            onClick={loadExistingMessagesAndContacts}
-                            className='bg-gray-200 p-3 rounded-xl px-5 hover:bg-gray-300 transition-colors'
-                        >
-                            <RefreshCw size={20} />
-                            Refresh Messages
-                        </button>
                     </div>
                 </div>
 
@@ -494,21 +761,23 @@ export default function MessagesPage() {
                                     
                                     {/* Contact Info Column */}
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-gray-900">{contact.name}</div>
+                                        <div className={`font-medium ${contact.unreadCount && contact.unreadCount > 0 ? 'font-bold text-gray-900' : 'text-gray-900'}`}>
+                                            {contact.name}
+                                        </div>
                                         <div className="text-sm text-gray-500 truncate">
                                             {contact.lastMessage || 'No messages yet'}
                                         </div>
                                     </div>
                                     
-                                    {/* Time and Star Column */}
+                                    {/* Time and Unread Column */}
                                     <div className="flex flex-col items-end ml-2">
                                         <div className="text-xs text-gray-500 mb-1">
                                             {contact.lastMessageTime ? formatRelativeTime(contact.lastMessageTime) : contact.time}
                                         </div>
-                                        {messages[contact.id] && messages[contact.id].length > 0 && (
-                                            <div className="text-xs text-gray-400">
-                                                {messages[contact.id].length} message{messages[contact.id].length !== 1 ? 's' : ''}
-                                            </div>
+                                        {contact.unreadCount && contact.unreadCount > 0 ? (
+                                            <div className="w-3 h-3 bg-a rounded-full"></div>
+                                        ) : (
+                                            <div className="w-3 h-3"></div>
                                         )}
                                     </div>
                                 </div>
@@ -520,23 +789,30 @@ export default function MessagesPage() {
                     <div className="w-7/10 flex border rounded-xl m-3 flex-col bg-white">
                         {selectedContact ? (
                             <>
-                                <div className="px-6 py-4 flex justify-between items-center border-b border-gray-200">
+                                <div className="px-6 py-4 flex justify-between items-center border-b-2 border-gray-200">
+                                    <div className="flex items-center">
+                                        <div className="w-10 h-10 rounded-full bg-b flex items-center justify-center overflow-hidden mr-3">
+                                            <div className="text-sm font-bold text-white">
+                                                {selectedContact.name.split(' ').map(word => word[0]).join('')}
+                                            </div>
+                                        </div>
                                     <div className="font-semibold text-lg text-gray-900">{selectedContact.name}</div>
+                                    </div>
                                     <div className="flex items-center space-x-4">
                                         <button className="text-gray-600 hover:text-gray-900 transition-colors">
-                                            <Phone size={20} />
-                                        </button>
-                                        <button className="text-gray-600 hover:text-gray-900 transition-colors">
-                                            <Video size={20} />
-                                        </button>
-                                        <button className="text-gray-600 hover:text-gray-900 transition-colors">
-                                            <MoreHorizontal size={20} />
+                                            <MoreVertical size={20} />
                                         </button>
                                     </div>
                                 </div>
                                 
-                                <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                                    {messages[selectedContact.id]?.map((message) => (
+                                <div className="flex-1 overflow-y-auto p-4 bg-white" key={`messages-${selectedContact.id}-${messages[selectedContact.id]?.length || 0}`}>
+                                    {(() => {
+                                        console.log('🎨 Rendering messages for contact:', selectedContact.id, 'Messages:', messages[selectedContact.id]?.length || 0);
+                                        return null;
+                                    })()}
+                                    {messages[selectedContact.id]?.map((message) => {
+                                        console.log('🎨 Rendering message:', message);
+                                        return (
                                         <div 
                                             key={message.id} 
                                             className={`mb-4 max-w-3/4 ${message.senderId === currentUserId.toString() ? 'ml-auto' : 'mr-auto'}`}
@@ -550,7 +826,7 @@ export default function MessagesPage() {
                                             
                                             <div 
                                                 className={`p-3 rounded-lg ${message.senderId === currentUserId.toString() 
-                                                    ? 'bg-b text-white rounded-br-none' 
+                                                        ? 'bg-white text-gray-800 rounded-br-none shadow-sm' 
                                                     : 'bg-white text-gray-800 rounded-bl-none shadow-sm'}`}
                                             >
                                                 {message.text}
@@ -563,10 +839,16 @@ export default function MessagesPage() {
                                                 {message.time}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
+                                    {(!messages[selectedContact.id] || messages[selectedContact.id].length === 0) && (
+                                        <div className="text-center text-gray-500 py-8">
+                                            <p>No messages yet. Start the conversation!</p>
+                                        </div>
+                                    )}
                                 </div>
                                 
-                                <div className="p-3 flex items-center border-t border-gray-200 text-b">
+                                <div className="p-3 flex items-center border-t-2 border-gray-200 text-b">
                                     <input
                                         type="text"
                                         value={messageInput}
@@ -580,9 +862,6 @@ export default function MessagesPage() {
                                         className="flex-1 p-3 focus:outline-none focus:border-transparent"
                                         disabled={isLoading}
                                     />
-                                    <button className="ml-2 text-gray-600 hover:text-gray-900 transition-colors">
-                                        <Mic size={20} />
-                                    </button>
                                     <button 
                                         onClick={sendMessage}
                                         disabled={isLoading}
