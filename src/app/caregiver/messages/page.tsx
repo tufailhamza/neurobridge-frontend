@@ -13,7 +13,7 @@
  * - Create contacts for clinicians who message you
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import CaregiverSidebar from '../sidebar';
 import { Search, Filter, Star, Send, Archive, X, MoreVertical } from 'lucide-react';
 import PubNubService, { PubNubMessage } from '../../../services/pubnub';
@@ -57,7 +57,8 @@ interface Clinician {
     area_of_expertise: string;
 }
 
-export default function MessagesPage() {
+// Separate component that uses useSearchParams
+function MessagesContent() {
     // State for active tab in contacts
     const [activeTab, setActiveTab] = useState('all');
     const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -1073,5 +1074,13 @@ export default function MessagesPage() {
             {/* Real-time Status Indicator */}
             
         </div>
+    );
+}
+
+export default function MessagesPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <MessagesContent />
+        </Suspense>
     );
 }
