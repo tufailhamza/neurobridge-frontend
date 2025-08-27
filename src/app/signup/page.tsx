@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/login/Header';
+import { env } from '@/config/env';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -11,9 +12,67 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const checkEmailExists = async (email: string) => {
+    try {
+      const response = await fetch(`${env.BACKEND_URL}/auth/check-email/${encodeURIComponent(email)}`);
+      const data = await response.json();
+      return data.exists;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false; // Assume email is available if check fails
+    }
+  };
+
+  const handleEmailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    setEmailError(''); // Clear previous error
+
+    // Only check if email is valid format and not empty
+    if (newEmail && newEmail.includes('@')) {
+      setIsCheckingEmail(true);
+      const emailExists = await checkEmailExists(newEmail);
+      setIsCheckingEmail(false);
+      
+      if (emailExists) {
+        setEmailError('An account with this email already exists');
+      }
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setPasswordError('');
+    setEmailError('');
+    
+    // Validate email format
+    if (!email || !email.includes('@')) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    // Check if email exists
+    setIsCheckingEmail(true);
+    const emailExists = await checkEmailExists(email);
+    setIsCheckingEmail(false);
+    
+    if (emailExists) {
+      setEmailError('An account with this email already exists');
+      return;
+    }
+    
+    // Validate password length
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+    
     if (password !== confirmPassword) {
       alert('Passwords do not match!');
       return;
@@ -22,6 +81,16 @@ export default function SignupPage() {
     // Store basic info in localStorage
     localStorage.setItem('signup_basic', JSON.stringify({ email, password }));
     router.push('/signup/mode');
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    
+    // Clear error if password meets requirement
+    if (newPassword.length >= 8) {
+      setPasswordError('');
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -52,17 +121,29 @@ export default function SignupPage() {
                 <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-2">
                   Email
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
-                  placeholder="Example@gmail.com"
-                />
+                <div className="relative">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={handleEmailChange}
+                    className={`w-full text-black px-4 py-3 border rounded-lg transition-colors focus:outline-none ${
+                      emailError ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Example@gmail.com"
+                  />
+                  {isCheckingEmail && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                </div>
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-600">{emailError}</p>
+                )}
               </div>
 
               {/* Password Field */}
@@ -78,8 +159,10 @@ export default function SignupPage() {
                     autoComplete="new-password"
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg transition-colors focus:outline-none"
+                    onChange={handlePasswordChange}
+                    className={`w-full text-black px-4 py-3 border rounded-lg transition-colors focus:outline-none ${
+                      passwordError ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="Enter at least 8 characters"
                   />
                   <button
@@ -99,6 +182,9 @@ export default function SignupPage() {
                     )}
                   </button>
                 </div>
+                {passwordError && (
+                  <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+                )}
               </div>
 
               {/* Confirm Password Field */}
@@ -140,9 +226,10 @@ export default function SignupPage() {
               {/* Create Account Button */}
               <button
                 type="submit"
-                className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                disabled={isCheckingEmail}
+                className="w-full bg-a hover:bg-a-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Account
+                {isCheckingEmail ? 'Checking Email...' : 'Create Account'}
               </button>
             </form>
           </div>
