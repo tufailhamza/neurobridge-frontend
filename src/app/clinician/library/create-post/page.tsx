@@ -776,16 +776,23 @@ export default function CreatePostPage() {
                  <button
                    type="button"
                    onClick={() => setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen)}
-                   className="w-full px-3 py-2 text-left border text-black border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent bg-white"
+                   className="w-full px-3 py-2 text-left border-1 text-b border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent bg-white relative"
                  >
-                   {collection || 'Select a collection'}
+                   <div
+                     className={`inline-block ${
+                       collection
+                         ? 'border-1 border-b rounded px-2 py-0.5'
+                         : ''
+                     }`}
+                   >
+                     {collection || 'Select a collection'}
+                   </div>
                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                      </svg>
                    </span>
                  </button>
-                 
                  {/* Dropdown Content */}
                  {isCollectionsDropdownOpen && (
                    <div className="absolute z-10 w-full mt-1 rounded-b-xl bg-white border text-black border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -805,7 +812,7 @@ export default function CreatePostPage() {
                                  setCollection(e.target.value);
                                  setIsCollectionsDropdownOpen(false);
                                }}
-                               className="mr-3"
+                               className="mr-3 bg-b"
                              />
                              <label 
                                htmlFor={`collection-${col.collection_id}`}
@@ -815,16 +822,16 @@ export default function CreatePostPage() {
                              </label>
                            </div>
                          ))}
-                         <div className="border-t border-gray-200">
+                         <div className=" border-gray-200 p-4">
                            <button
                              type="button"
                              onClick={() => {
                                setIsCollectionsDropdownOpen(false);
                                setIsCreateCollectionModalOpen(true);
                              }}
-                             className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left"
+                             className="w-full items-center justify-center px-3 py-2 text-sm text-b hover:bg-blue-50 text-left font-bold rounded-full border-1"
                            >
-                             + Create new collection
+                             + Create collection
                            </button>
                          </div>
                        </>
@@ -848,20 +855,6 @@ export default function CreatePostPage() {
                    </div>
                  )}
                </div>
-               
-               {/* Selected Collection Display */}
-               {collection && (
-                 <div className="flex items-center justify-between p-2 bg-blue-50 rounded-md">
-                   <span className="text-sm text-blue-800">Selected: {collection}</span>
-                   <button
-                     type="button"
-                     onClick={() => setCollection('')}
-                     className="text-blue-600 hover:text-blue-700 text-sm"
-                   >
-                     Clear
-                   </button>
-                 </div>
-               )}
              </div>
 
                          {/* Tags */}
@@ -870,7 +863,7 @@ export default function CreatePostPage() {
                <div className="space-y-2">
                  <div className="flex flex-wrap gap-2">
                    {tags.map((tag, index) => (
-                     <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                     <span key={index} className="inline-flex items-center px-2 py-1 rounded-2xl text-xs font-medium border-1 border-gray-300 text-black">
                        {tag}
                        <button
                          type="button"
@@ -916,7 +909,7 @@ export default function CreatePostPage() {
           <div className="bg-white rounded-lg p-6 w-96 max-w-md">
             {/* Header Row */}
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Create collection</h3>
+              <h3 className="text-xl font-bold text-b">Create collection</h3>
               <button
                 type="button"
                 onClick={() => {
@@ -936,14 +929,14 @@ export default function CreatePostPage() {
               Once a collection is created, you can begin to add items to it
             </p>
 
-            {/* Input Box with Arrow */}
-            <div className="flex items-center space-x-2">
+            {/* Input Box with Arrow inside the textbox */}
+            <div className="relative">
               <input
                 type="text"
                 value={newCollectionName}
                 onChange={(e) => setNewCollectionName(e.target.value)}
                 placeholder="Collection name"
-                className="flex-1 px-3 py-2 border text-gray-900 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                className="w-full pr-10 px-3 py-2 border text-gray-900 border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && newCollectionName.trim()) {
                     createCollection(newCollectionName.trim());
@@ -958,7 +951,9 @@ export default function CreatePostPage() {
                   }
                 }}
                 disabled={!newCollectionName.trim()}
-                className="px-3 py-2 bg-b text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-transparent text-b rounded-full hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                style={{ height: '36px', width: '36px' }}
+                tabIndex={-1}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
