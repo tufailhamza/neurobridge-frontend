@@ -29,7 +29,6 @@ export default function CreatePostPage() {
   const [isCollectionsDropdownOpen, setIsCollectionsDropdownOpen] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
-  const [imageUrl, setImageUrl] = useState('');
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -86,7 +85,6 @@ export default function CreatePostPage() {
         setTitle(draft.title);
         setContent(draft.content);
         setCoverImagePreview(draft.coverImageUrl || '');
-        setImageUrl(draft.frontendUrl || ''); // Restore the frontend URL
         setTags(draft.tags || []);
         setPrice(draft.price || 0);
         setAllowComments(draft.allowComments !== undefined ? draft.allowComments : true);
@@ -304,13 +302,6 @@ export default function CreatePostPage() {
     setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const addImageUrl = () => {
-    if (imageUrl.trim()) {
-      setAttachmentPreviews(prev => [...prev, imageUrl.trim()]);
-      setImageUrl('');
-    }
-  };
-
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
@@ -326,7 +317,6 @@ export default function CreatePostPage() {
           title: title.trim() || 'Untitled Draft',
           content: content,
           coverImageUrl: coverImagePreview,
-          frontendUrl: imageUrl, // Save the frontend URL in draft
           tags,
           price: tier === 'paid' ? price : 0,
           allowComments,
@@ -346,7 +336,6 @@ export default function CreatePostPage() {
           title: title.trim() || 'Untitled Draft',
           content: content,
           coverImageUrl: coverImagePreview,
-          frontendUrl: imageUrl, // Save the frontend URL in draft
           tags,
           price: tier === 'paid' ? price : 0,
           allowComments,
@@ -410,22 +399,25 @@ export default function CreatePostPage() {
 
     setIsPublishing(true);
     try {
-        const postData = {
-         image_url: coverImagePreview,
-         frontend_url: imageUrl, // Add the frontend URL entered by user
-         title: title.trim(),
-         tags: tags,
-         price: tier === 'paid' ? price : 0,
-         html_content: content,
-         allow_comments: allowComments,
-         tier: tier,
-         collection: collection,
-         attachments: attachmentPreviews,
-         date_published: isScheduled ? `${scheduledDate}T${scheduledTime}` : new Date().toISOString(),
-         is_scheduled: isScheduled,
-         scheduled_date: isScheduled ? `${scheduledDate}T${scheduledTime}` : null,
-         scheduled_time: isScheduled ? `${scheduledDate}T${scheduledTime}` : null
-       };
+      // Create FormData for multipart/form-data submission
+      const formData = new FormData();
+      
+      // Add image file if selected
+      if (coverImageFile) {
+        formData.append('image', coverImageFile);
+      }
+      
+      // Add other form fields
+      formData.append('title', title.trim());
+      formData.append('tags', JSON.stringify(tags));
+      formData.append('price', tier === 'paid' ? price.toString() : '0');
+      formData.append('html_content', content);
+      formData.append('allow_comments', allowComments.toString());
+      formData.append('tier', tier);
+      formData.append('collection', collection);
+      formData.append('attachments', JSON.stringify(attachmentPreviews));
+      formData.append('date_published', isScheduled ? `${scheduledDate}T${scheduledTime}` : new Date().toISOString());
+      formData.append('scheduled_time', isScheduled ? `${scheduledDate}T${scheduledTime}` : new Date().toISOString());
 
       // Get the access token from localStorage
       const accessToken = localStorage.getItem('access_token');
@@ -437,10 +429,10 @@ export default function CreatePostPage() {
       const response = await fetch(`${env.BACKEND_URL}/posts/`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
+          // Don't set Content-Type header - let browser set it with boundary for FormData
         },
-        body: JSON.stringify(postData),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -489,51 +481,18 @@ export default function CreatePostPage() {
                 <h1 className="text-2xl font-bold text-gray-900">Edit Draft</h1>
               </div>
             )}
-            {/* Attachments Section */}
+            {/* Cover Image Section */}
             <div className="p-6 border-1 rounded-md border-gray-200">
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-gray-900">Attachments</h3>
-                  <p className="text-sm text-gray-500">
-                    Upload files (JPG, JPEG, PNG, PDF, GIF Max 2GB) or add image links
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Cover Image</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Upload a cover image for your post (JPG, JPEG, PNG, GIF)
                   </p>
                 </div>
-                <button 
-                  onClick={() => document.getElementById('attachmentFiles')?.click()}
-                  className="font-bold text-gray-900 px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors border border-gray-300"
-                >
-                  Upload
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                {/* Image URL Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Add Image Link:</label>
-                  <div className="flex space-x-2">
-                    <input
-                      type="url"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="Enter image URL (e.g., https://example.com/image.jpg)"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addImageUrl();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={addImageUrl}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-
-                <div>
+                
+                {/* Cover Image Upload */}
+                <div className="space-y-3">
                   <input
                     type="file"
                     id="coverImageFile"
@@ -551,9 +510,55 @@ export default function CreatePostPage() {
                     }}
                     className="hidden"
                   />
-                
+                  
+                  <button
+                    onClick={() => document.getElementById('coverImageFile')?.click()}
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                  >
+                    {coverImageFile ? 'Change Cover Image' : 'Click to upload cover image'}
+                  </button>
+                  
+                  {/* Cover Image Preview */}
+                  {coverImagePreview && (
+                    <div className="relative">
+                      <img 
+                        src={coverImagePreview} 
+                        alt="Cover preview" 
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => {
+                          setCoverImageFile(null);
+                          setCoverImagePreview('');
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
                 </div>
-                
+              </div>
+            </div>
+
+            {/* Attachments Section */}
+            <div className="p-6 border-1 rounded-md border-gray-200">
+              <div className="flex justify-between items-start mb-4">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-900">Attachments</h3>
+                  <p className="text-sm text-gray-500">
+                    Upload additional files (JPG, JPEG, PNG, PDF, GIF Max 2GB)
+                  </p>
+                </div>
+                <button 
+                  onClick={() => document.getElementById('attachmentFiles')?.click()}
+                  className="font-bold text-gray-900 px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors border border-gray-300"
+                >
+                  Upload
+                </button>
+              </div>
+              
+              <div className="space-y-3">
                 {/* Attachments Upload */}
                 <div className="space-y-3">
                   <div>
