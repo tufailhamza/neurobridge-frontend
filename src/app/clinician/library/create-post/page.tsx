@@ -41,7 +41,6 @@ export default function CreatePostPage() {
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Function to fetch user collections
   const fetchUserCollections = async () => {
@@ -117,16 +116,16 @@ export default function CreatePostPage() {
       setScheduledDate('');
       setScheduledTime('');
     } else {
-      // If turning on scheduling, open the modal
-      setIsScheduleModalOpen(true);
-    }
-  };
-
-  // Function to confirm schedule
-  const handleConfirmSchedule = () => {
-    if (scheduledDate && scheduledTime) {
+      // If turning on scheduling, set isScheduled to true
       setIsScheduled(true);
-      setIsScheduleModalOpen(false);
+      // Set default date to tomorrow and time to current time + 1 hour
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setScheduledDate(tomorrow.toISOString().split('T')[0]);
+      
+      const nextHour = new Date();
+      nextHour.setHours(nextHour.getHours() + 1);
+      setScheduledTime(nextHour.toTimeString().slice(0, 5));
     }
   };
 
@@ -411,21 +410,22 @@ export default function CreatePostPage() {
 
     setIsPublishing(true);
     try {
-      const postData = {
-        image_url: coverImagePreview,
-        frontend_url: imageUrl, // Add the frontend URL entered by user
-        title: title.trim(),
-        tags: tags,
-        price: tier === 'paid' ? price : 0,
-        html_content: content,
-        allow_comments: allowComments,
-        tier: tier,
-        collection: collection,
-        attachments: attachmentPreviews,
-        date_published: isScheduled ? `${scheduledDate}T${scheduledTime}` : new Date().toISOString(),
-        is_scheduled: isScheduled,
-        scheduled_date: isScheduled ? `${scheduledDate}T${scheduledTime}` : null
-      };
+        const postData = {
+         image_url: coverImagePreview,
+         frontend_url: imageUrl, // Add the frontend URL entered by user
+         title: title.trim(),
+         tags: tags,
+         price: tier === 'paid' ? price : 0,
+         html_content: content,
+         allow_comments: allowComments,
+         tier: tier,
+         collection: collection,
+         attachments: attachmentPreviews,
+         date_published: isScheduled ? `${scheduledDate}T${scheduledTime}` : new Date().toISOString(),
+         is_scheduled: isScheduled,
+         scheduled_date: isScheduled ? `${scheduledDate}T${scheduledTime}` : null,
+         scheduled_time: isScheduled ? `${scheduledDate}T${scheduledTime}` : null
+       };
 
       // Get the access token from localStorage
       const accessToken = localStorage.getItem('access_token');
@@ -731,7 +731,7 @@ export default function CreatePostPage() {
                <button 
                  onClick={() => setAllowComments(!allowComments)}
                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-b focus:ring-offset-2 ${
-                   allowComments ? 'bg-blue-600' : 'bg-gray-200'
+                   allowComments ? 'bg-a' : 'bg-gray-200'
                  }`}
                >
                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -747,7 +747,7 @@ export default function CreatePostPage() {
                 <button 
                   onClick={handleScheduleToggle}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-b focus:ring-offset-2 ${
-                    isScheduled ? 'bg-blue-600' : 'bg-gray-200'
+                    isScheduled ? 'bg-a' : 'bg-gray-200'
                   }`}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -756,12 +756,38 @@ export default function CreatePostPage() {
                 </button>
               </div>
               
-              {/* Show scheduled date if set */}
-              {isScheduled && scheduledDate && scheduledTime && (
-                <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md">
-                  Scheduled for: {formatScheduledDate()}
-                </div>
-              )}
+                             {/* Inline Date and Time Pickers */}
+               {isScheduled && (
+                 <div className="space-y-3">
+                   {/* Date Picker Row */}
+                   <div className="space-y-2">
+                     <label className="block text-sm font-medium text-gray-700">Date</label>
+                     <div className="flex items-center space-x-2">
+                       <input
+                         type="date"
+                         value={scheduledDate}
+                         onChange={(e) => setScheduledDate(e.target.value)}
+                         min={new Date().toISOString().split('T')[0]}
+                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       />
+                     </div>
+                   </div>
+                   
+                   {/* Time Picker Row */}
+                   <div className="space-y-2">
+                     <label className="block text-sm font-medium text-gray-700">Time</label>
+                     <div className="flex items-center space-x-2">
+                       <input
+                         type="time"
+                         value={scheduledTime}
+                         onChange={(e) => setScheduledTime(e.target.value)}
+                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       />
+                     </div>
+                   </div>
+                   
+                 </div>
+               )}
             </div>
 
             {/* Collections */}
@@ -964,86 +990,7 @@ export default function CreatePostPage() {
         </div>
       )}
 
-      {/* Schedule Release Modal */}
-      {isScheduleModalOpen && (
-        <div className="fixed inset-0 bg-black/20 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md">
-            {/* Header Row */}
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Schedule Release</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsScheduleModalOpen(false);
-                  setScheduledDate('');
-                  setScheduledTime('');
-                }}
-                className="text-gray-900 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
 
-            {/* Description */}
-            <p className="text-sm text-gray-600 mb-4">
-              Choose when you want your post to be published
-            </p>
-
-            {/* Date and Time Inputs */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time
-                </label>
-                <input
-                  type="time"
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex space-x-3 mt-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsScheduleModalOpen(false);
-                  setScheduledDate('');
-                  setScheduledTime('');
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSchedule}
-                disabled={!scheduledDate || !scheduledTime}
-                className="flex-1 px-4 py-2 bg-b text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Schedule
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 

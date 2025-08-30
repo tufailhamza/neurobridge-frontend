@@ -25,6 +25,8 @@ export default function LibraryPage() {
   const [newCollectionName, setNewCollectionName] = useState('');
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [expandedCollections, setExpandedCollections] = useState<Set<number>>(new Set());
+  const [scheduledPosts, setScheduledPosts] = useState<Post[]>([]);
+  const [scheduledPostsLoading, setScheduledPostsLoading] = useState(false);
   const postsPerPage = 200;
 
   // Function to get posts for a specific collection
@@ -69,6 +71,50 @@ export default function LibraryPage() {
     } catch (error) {
       console.error('Error loading drafts:', error);
       setDrafts([]);
+    }
+  };
+
+  // Fetch scheduled posts from backend API
+  const fetchScheduledPosts = async () => {
+    try {
+      setScheduledPostsLoading(true);
+      const userInfo = localStorage.getItem('user_info');
+      if (!userInfo) {
+        throw new Error('User not authenticated');
+      }
+      
+      const user = JSON.parse(userInfo);
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!accessToken) {
+        throw new Error('No access token found');
+      }
+
+      const response = await fetch(`${env.BACKEND_URL}/posts/user/scheduled/${user.user_id}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please log in again.');
+        } else if (response.status === 403) {
+          throw new Error('Access forbidden. Please check your permissions.');
+        } else {
+          throw new Error(`Failed to fetch scheduled posts: ${response.status}`);
+        }
+      }
+
+      const data = await response.json();
+      setScheduledPosts(data || []);
+    } catch (err) {
+      console.error('Error fetching scheduled posts:', err);
+      // Don't set error for scheduled posts as it's not critical
+      setScheduledPosts([]);
+    } finally {
+      setScheduledPostsLoading(false);
     }
   };
 
@@ -200,7 +246,15 @@ export default function LibraryPage() {
     fetchUserPosts();
     loadDrafts(); // Load drafts when component mounts
     fetchUserCollections(); // Load collections when component mounts
+    fetchScheduledPosts(); // Load scheduled posts when component mounts
   }, [currentPage]);
+
+  // Fetch scheduled posts when scheduled tab is active
+  useEffect(() => {
+    if (activeTab === 'scheduled') {
+      fetchScheduledPosts();
+    }
+  }, [activeTab]);
 
   // Auto-refresh posts when user returns to the page (useful after creating posts)
   useEffect(() => {
@@ -366,6 +420,7 @@ export default function LibraryPage() {
       setPosts(data || []);
       loadDrafts(); // Also refresh drafts
       fetchUserCollections(); // Also refresh collections
+      fetchScheduledPosts(); // Also refresh scheduled posts
       // setTimeout(() => setSuccessMessage(null), 5000); // Clear message after 5 seconds
     } catch (err) {
       console.error('Error refreshing posts:', err);
@@ -377,7 +432,17 @@ export default function LibraryPage() {
 
   // Filter posts or drafts based on active tab and search query
   const getFilteredItems = () => {
-    let items = activeTab === 'draft' ? drafts : activeTab === 'collections' ? collections : posts;
+    let items;
+    if (activeTab === 'draft') {
+      items = drafts;
+    } else if (activeTab === 'collections') {
+      items = collections;
+    } else if (activeTab === 'scheduled') {
+      items = scheduledPosts;
+    } else {
+      items = posts;
+    }
+    
     return items.filter(item => {
       if (activeTab === 'collections') {
         return item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -479,7 +544,9 @@ export default function LibraryPage() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder={activeTab === 'draft' ? 'Search drafts...' : activeTab === 'collections' ? 'Search collections...' : 'Search posts...'}
+                    placeholder={activeTab === 'draft' ? 'Search drafts...' : 
+                                activeTab === 'collections' ? 'Search collections...' : 
+                                activeTab === 'scheduled' ? 'Search scheduled posts...' : 'Search posts...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full text-gray-900 pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -511,12 +578,13 @@ export default function LibraryPage() {
 
           {/* Content Area */}
           <div className="px-6 pb-6">
-            {loading || (activeTab === 'collections' && collectionsLoading) ? (
+            {loading || (activeTab === 'collections' && collectionsLoading) || (activeTab === 'scheduled' && scheduledPostsLoading) ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                   <p className="text-gray-600">
-                    {activeTab === 'collections' ? 'Loading collections...' : 'Loading posts...'}
+                    {activeTab === 'collections' ? 'Loading collections...' : 
+                     activeTab === 'scheduled' ? 'Loading scheduled posts...' : 'Loading posts...'}
                   </p>
                 </div>
               </div>
@@ -533,7 +601,12 @@ export default function LibraryPage() {
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-600">
-                  {searchQuery ? `No ${activeTab === 'draft' ? 'drafts' : activeTab === 'collections' ? 'collections' : 'posts'} found matching your search.` : `No ${activeTab === 'draft' ? 'drafts' : activeTab === 'collections' ? 'collections' : 'posts'} found.`}
+                  {searchQuery ? `No ${activeTab === 'draft' ? 'drafts' : 
+                                activeTab === 'collections' ? 'collections' : 
+                                activeTab === 'scheduled' ? 'scheduled posts' : 'posts'} found matching your search.` : 
+                   `No ${activeTab === 'draft' ? 'drafts' : 
+                        activeTab === 'collections' ? 'collections' : 
+                        activeTab === 'scheduled' ? 'scheduled posts' : 'posts'} found.`}
                 </p>
               </div>
             ) : (
@@ -618,7 +691,7 @@ export default function LibraryPage() {
                       </tbody>
                     </table>
                   )}
-                  {activeTab !== 'collections' && (
+                  {activeTab === 'scheduled' && (
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
@@ -635,7 +708,75 @@ export default function LibraryPage() {
                             Price
                           </th>
                           <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {activeTab === 'draft' ? 'Date Created' : 'Date Published'}
+                            Scheduled For
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {currentItems.map((item: any) => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                            </td>
+                            <td className="py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{item.collection || '-'}</div>
+                            </td>
+                            <td className="py-4 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full text-gray-600">
+                                {item.tier || item.access || 'public'}
+                              </span>
+                            </td>
+                            <td className="py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{formatPrice(item.price)}</div>
+                            </td>
+                            <td className="py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">
+                                {item.scheduled_time ? formatDate(item.scheduled_time) : formatDate(item.scheduled_date)}
+                              </div>
+                            </td>
+                            <td className="py-4 whitespace-nowrap">
+                              <div className="relative actions-dropdown">
+                                <button
+                                  onClick={() => setOpenDropdown(openDropdown === item.id ? null : item.id)}
+                                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                                >
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                  </svg>
+                                </button>
+                                
+                                {openDropdown === item.id && (
+                                  <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                    <div className="px-4 py-2 text-sm text-gray-500">
+                                      Scheduled post
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  {activeTab !== 'collections' && activeTab !== 'scheduled' && (
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Title
+                          </th>
+                          <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Collection
+                          </th>
+                          <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Tier Access
+                          </th>
+                          <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Price
+                          </th>
+                          <th className="py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {activeTab === 'draft' ? 'Last Edited' : 'Date Published'}
                           </th>
                         </tr>
                       </thead>
