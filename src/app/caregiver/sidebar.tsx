@@ -105,9 +105,45 @@ export default function CaregiverSidebar() {
                     : 'text-gray-700 hover:bg-gray-100 hover:text-b'
                 }`}
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                </svg>
+                {item.id === 'home' ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                  </svg>
+                ) : item.id === 'subscribed' ? (
+                  <img 
+                    src="/subscribed-icon.svg" 
+                    alt="Subscribed" 
+                    className={`h-5 w-5 ${activeItem === item.id ? 'brightness-0 invert' : ''}`}
+                  />
+                ) : item.id === 'messages' ? (
+                  <img 
+                    src="/Messages-icon.svg" 
+                    alt="Messages" 
+                    className={`h-5 w-5 ${activeItem === item.id ? 'brightness-0 invert' : ''}`}
+                  />
+                ) : item.id === 'purchased' ? (
+                  <img 
+                    src="/Purchased-icon.svg" 
+                    alt="Purchased" 
+                    className={`h-5 w-5 ${activeItem === item.id ? 'brightness-0 invert' : ''}`}
+                  />
+                ) : item.id === 'ariadne' ? (
+                  <img 
+                    src="/ariadne-icon.svg" 
+                    alt="Ariadne" 
+                    className={`h-5 w-5 ${activeItem === item.id ? 'brightness-0 invert' : ''}`}
+                  />
+                ) : item.id === 'settings' ? (
+                  <img 
+                    src="/setting-icon.svg" 
+                    alt="Settings" 
+                    className={`h-5 w-5 ${activeItem === item.id ? 'brightness-0 invert' : ''}`}
+                  />
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                  </svg>
+                )}
                 <span className="font-medium">{item.label}</span>
               </button>
             ))}

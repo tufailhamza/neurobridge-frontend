@@ -19,6 +19,12 @@ export default function ClinicianHomePage() {
   const [contentFilter, setContentFilter] = useState<string>('');
   const [diagnosisFilter, setDiagnosisFilter] = useState<string>('');
   const [stateFilter, setStateFilter] = useState<string>('');
+  
+  // Clinicians states
+  const [unsubscribedClinicians, setUnsubscribedClinicians] = useState<any[]>([]);
+  const [displayedClinicians, setDisplayedClinicians] = useState<number>(5);
+  const [cliniciansLoading, setCliniciansLoading] = useState(true);
+  const [subscribingClinicians, setSubscribingClinicians] = useState<Set<number>>(new Set());
 
   // Filter function
   const applyFilters = (cards: FeedCardType[]) => {
@@ -69,6 +75,75 @@ export default function ClinicianHomePage() {
     setFilteredFeedCards(applyFilters(feedCards));
   }, [clinicianFilter, contentFilter, diagnosisFilter, stateFilter, feedCards]);
 
+  // Fetch clinicians except current user
+  useEffect(() => {
+    const fetchCliniciansExcept = async () => {
+      try {
+        setCliniciansLoading(true);
+        // Get user_id from localStorage or context (you may need to adjust this based on your auth setup)
+        const userInfo = localStorage.getItem('user_info');
+        const user_id = JSON.parse(userInfo || '{}').user_id;
+        const response = await fetch(`${env.BACKEND_URL}/clinicians/except/${user_id}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch clinicians: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setUnsubscribedClinicians(data || []);
+      } catch (err) {
+        console.error('Error fetching clinicians:', err);
+        // Fallback to empty array if API fails
+        setUnsubscribedClinicians([]);
+      } finally {
+        setCliniciansLoading(false);
+      }
+    };
+
+    fetchCliniciansExcept();
+  }, []);
+
+  // Subscribe to clinician function
+  const handleSubscribe = async (clinicianId: number) => {
+    try {
+      setSubscribingClinicians(prev => new Set(prev).add(clinicianId));
+      
+      const userInfo = localStorage.getItem('user_info');
+      const clinician_id = JSON.parse(userInfo || '{}').user_id;
+      
+      const response = await fetch(`${env.BACKEND_URL}/clinicians/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caregiver_id: clinicianId,
+          clinician_id: clinician_id
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to subscribe: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Subscribe response:', data);
+      
+      // Remove the subscribed clinician from the list
+      setUnsubscribedClinicians(prev => prev.filter(clinician => clinician.user_id !== clinicianId));
+      
+    } catch (error) {
+      console.error('Error subscribing to clinician:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setSubscribingClinicians(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(clinicianId);
+        return newSet;
+      });
+    }
+  };
+
   // Fetch feed data from backend
   useEffect(() => {
     const fetchFeedData = async () => {
@@ -84,11 +159,11 @@ export default function ClinicianHomePage() {
           throw new Error(`Backend is not accessible: ${healthResponse.status}`);
         }
         
-                        console.log('Fetching posts from:', `${env.BACKEND_URL}/posts/?limit=10`);
+                        console.log('Fetching posts from:', `${env.BACKEND_URL}/posts/?limit=20`);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 1000000); // 10 second timeout
         
-        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=10`, {
+        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=20`, {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -175,10 +250,10 @@ export default function ClinicianHomePage() {
         <div className="w-4/5 p-6 ">
           <div className=" rounded-lg h-full">
             <div className="flex space-x-4 mb-6">
-                <div className="bg-b text-white px-4 py-2 rounded-full">
+                <div className="bg-b text-white px-4 py-2 rounded-full font-bold">
                     My Feed
                 </div>
-                <div className="border-2 border-b text-b px-4 py-2 rounded-full">
+                <div className="border-2 border-b text-b px-4 py-2 rounded-full font-bold">
                     Discover
                 </div>
             </div>
@@ -223,7 +298,7 @@ export default function ClinicianHomePage() {
             <div className="mb-6 border-gray-200 border-2 rounded-2xl p-6">
               {/* Inner row - Title and Icon */}
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+                <h3 className="text-lg text-gray-400 mb-4">Filters</h3>
                 <div className="flex items-center space-x-2">
                   {(clinicianFilter && clinicianFilter !== 'Clinician') || 
                    (contentFilter && contentFilter !== 'Content') || 
@@ -252,12 +327,17 @@ export default function ClinicianHomePage() {
               {/* Inner row - Clinician and Content dropdowns */}
               <div className="flex space-x-3 mb-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">Clinician</label>
-                  <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
-                    value={clinicianFilter}
-                    onChange={(e) => setClinicianFilter(e.target.value)}
-                  >
+
+                                      <select 
+                      className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center'
+                      }}
+                      value={clinicianFilter}
+                      onChange={(e) => setClinicianFilter(e.target.value)}
+                    >
                     <option>Clinician</option>
                     <option>BCBA</option>
                     <option>LBA</option>
@@ -272,9 +352,14 @@ export default function ClinicianHomePage() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">Content</label>
+
                   <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center'
+                    }}
                     value={contentFilter}
                     onChange={(e) => setContentFilter(e.target.value)}
                   >
@@ -300,9 +385,14 @@ export default function ClinicianHomePage() {
               {/* Inner row - Diagnosis and State dropdowns */}
               <div className="flex space-x-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">Diagnosis</label>
+
                   <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center'
+                    }}
                     value={diagnosisFilter}
                     onChange={(e) => setDiagnosisFilter(e.target.value)}
                   >
@@ -345,9 +435,14 @@ export default function ClinicianHomePage() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">State</label>
+
                   <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                    style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center'
+                      }}
                     value={stateFilter}
                     onChange={(e) => setStateFilter(e.target.value)}
                   >
@@ -419,60 +514,61 @@ export default function ClinicianHomePage() {
               
               {/* Vertical list of clinicians */}
               <div className="space-y-3">
-                {/* Clinician 1 */}
-                <div className="flex items-center justify-between bg-white rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-b rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold">DS</span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-800">Dr. Sarah Smith</div>
-                      <div className="text-sm text-gray-600">Neurologist</div>
-                    </div>
+                {cliniciansLoading ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-b mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-500">Loading clinicians...</p>
                   </div>
-                  <button className="px-3 py-1  text-b text-sm">
-                    Subscribe
-                  </button>
-                </div>
-                
-                {/* Clinician 2 */}
-                <div className="flex items-center justify-between bg-white rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-b rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold">MJ</span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-800">Dr. Michael Johnson</div>
-                      <div className="text-sm text-gray-600">Psychiatrist</div>
-                    </div>
+                ) : unsubscribedClinicians.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">No clinicians available</p>
                   </div>
-                  <button className="px-3 py-1  text-b text-sm">
-                    Subscribe
-                  </button>
-                </div>
-                
-                {/* Clinician 3 */}
-                <div className="flex items-center justify-between bg-white rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-b rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold">EW</span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-800">Dr. Emily Wilson</div>
-                      <div className="text-sm text-gray-600">Geriatrician</div>
-                    </div>
-                  </div>
-                  <button className="px-3 py-1  text-b text-sm">
-                    Subscribe
-                  </button>
-                </div>
-                
-                {/* Load more button */}
-                <div className="text-left pt-2">
-                  <button className="text-b text-sm font-medium hover:underline">
-                    Load more
-                  </button>
-                </div>
+                ) : (
+                  <>
+                    {unsubscribedClinicians.slice(0, displayedClinicians).map((clinician, index) => (
+                      <div key={clinician.user_id || index} className="flex items-center justify-between rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-b rounded-full flex items-center justify-center">
+                            <span className="text-white font-semibold">
+                              {clinician.first_name ? clinician.first_name.charAt(0).toUpperCase() : 'C'}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium text-black">
+                              {clinician.prefix ? `${clinician.prefix} ${clinician.first_name} ${clinician.last_name}` : `${clinician.first_name} ${clinician.last_name}`}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {clinician.specialty || clinician.clinician_type || 'Clinician'}
+                            </div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => handleSubscribe(clinician.user_id)}
+                          disabled={subscribingClinicians.has(clinician.user_id)}
+                          className={`px-3 py-1 font-semibold text-sm ${
+                            subscribingClinicians.has(clinician.user_id)
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-b hover:bg-b hover:text-white rounded transition-colors'
+                          }`}
+                        >
+                          {subscribingClinicians.has(clinician.user_id) ? 'Subscribing...' : 'Subscribe'}
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* See all button */}
+                    {unsubscribedClinicians.length > displayedClinicians && (
+                      <div className="text-left pt-2">
+                        <button 
+                          onClick={() => router.push('/clinician/subscribed?tab=discover')}
+                          className="text-b text-sm font-bold hover:underline"
+                        >
+                          See all
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>

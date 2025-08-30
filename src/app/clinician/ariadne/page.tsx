@@ -134,7 +134,7 @@ export default function AriadnePage() {
 
             {/* New Chat Button */}
             <div className="p-4 border-b border-gray-200">
-              <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-[#01B8FA] text-white rounded-lg hover:bg-[#0198D4] transition-colors">
                 <Plus size={16} />
                 <span>New Chat</span>
               </button>

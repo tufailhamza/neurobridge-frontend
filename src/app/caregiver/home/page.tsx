@@ -231,7 +231,7 @@ export default function CaregiverHomePage() {
             <div className="mb-6 border-gray-200 border-2 rounded-2xl p-6">
               {/* Inner row - Title and Icon */}
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+                <h3 className="text-lg text-gray-400 mb-4">Filters</h3>
                 <div className="flex items-center space-x-2">
                   {(clinicianFilter && clinicianFilter !== 'Clinician') || 
                    (contentFilter && contentFilter !== 'Content') || 
@@ -260,12 +260,17 @@ export default function CaregiverHomePage() {
               {/* Inner row - Clinician and Content dropdowns */}
               <div className="flex space-x-3 mb-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">Clinician</label>
-                  <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
-                    value={clinicianFilter}
-                    onChange={(e) => setClinicianFilter(e.target.value)}
-                  >
+
+                                      <select 
+                      className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center'
+                      }}
+                      value={clinicianFilter}
+                      onChange={(e) => setClinicianFilter(e.target.value)}
+                    >
                     <option>Clinician</option>
                     <option>BCBA</option>
                     <option>LBA</option>
@@ -280,9 +285,14 @@ export default function CaregiverHomePage() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">Content</label>
+
                   <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center'
+                    }}
                     value={contentFilter}
                     onChange={(e) => setContentFilter(e.target.value)}
                   >
@@ -308,9 +318,14 @@ export default function CaregiverHomePage() {
               {/* Inner row - Diagnosis and State dropdowns */}
               <div className="flex space-x-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">Diagnosis</label>
+
                   <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center'
+                    }}
                     value={diagnosisFilter}
                     onChange={(e) => setDiagnosisFilter(e.target.value)}
                   >
@@ -353,9 +368,14 @@ export default function CaregiverHomePage() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-b mb-1">State</label>
+
                   <select 
-                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                    className="w-full text-b px-3 py-2 border border-b rounded-full focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent font-semibold appearance-none bg-white pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath d='M1 1L6 6L11 1' stroke='%2313375B' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center'
+                    }}
                     value={stateFilter}
                     onChange={(e) => setStateFilter(e.target.value)}
                   >

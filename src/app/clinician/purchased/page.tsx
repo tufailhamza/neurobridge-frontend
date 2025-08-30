@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import CaregiverSidebar from '../sidebar';
+import ClinicianSidebar from '../sidebar';
 import PaidCard from '@/components/PaidCard';
 import { PaidCard as PaidCardType } from '@/types/PaidCard';
 import { env } from '@/config/env';
 
-export default function CaregiverPurchasedPage() {
+export default function ClinicianPurchasedPage() {
   const router = useRouter();
   const [paidCards, setpaidCards] = useState<PaidCardType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,7 @@ export default function CaregiverPurchasedPage() {
   return (
     <div className="h-full bg-d">
       {/* Sidebar */}
-      <CaregiverSidebar />
+      <ClinicianSidebar />
       
       {/* Main Content */}
       <div className="ml-64 h-full flex">
