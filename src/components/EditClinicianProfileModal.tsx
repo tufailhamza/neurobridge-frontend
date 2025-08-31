@@ -27,6 +27,8 @@ interface ClinicianProfile {
   clinician_type: string;
   license_number: string;
   area_of_expertise: string;
+  bio: string;
+  approach: string;
   content_preferences_tags: string[];
 }
 
@@ -50,7 +52,9 @@ export default function EditClinicianProfileModal({ isOpen, onClose, clinician, 
     clinician_type: clinician.clinician_type,
     specialty: clinician.specialty,
     license_number: clinician.license_number,
-    area_of_expertise: clinician.area_of_expertise
+    area_of_expertise: clinician.area_of_expertise,
+    bio: clinician.bio || '',
+    approach: clinician.approach || ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -251,6 +255,28 @@ export default function EditClinicianProfileModal({ isOpen, onClose, clinician, 
                   onChange={(e) => handleInputChange('area_of_expertise', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
                   placeholder="Describe your area of expertise"
+                  rows={3}
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                <textarea
+                  value={formData.bio}
+                  onChange={(e) => handleInputChange('bio', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                  placeholder="Tell us about your expertise..."
+                  rows={3}
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Approach</label>
+                <textarea
+                  value={formData.approach}
+                  onChange={(e) => handleInputChange('approach', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                  placeholder="Tell us about your approach..."
                   rows={3}
                   disabled={isLoading}
                 />

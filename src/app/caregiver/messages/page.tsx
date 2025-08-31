@@ -55,6 +55,8 @@ interface Clinician {
     clinician_type: string;
     license_number: string;
     area_of_expertise: string;
+    bio: string;
+    approach: string;
 }
 
 // Separate component that uses useSearchParams

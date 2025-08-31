@@ -920,7 +920,7 @@ function MessagesContent() {
                                                 {selectedContact.name.split(' ').map(word => word[0]).join('')}
                                             </div>
                                         </div>
-                                        <div className="font-semibold text-lg text-gray-900">{selectedContact.name}</div>
+                                    <div className="font-semibold text-lg text-gray-900">{selectedContact.name}</div>
                                     </div>
                                     <div className="flex items-center space-x-4">
                                         <button className="text-gray-600 hover:text-gray-900 transition-colors">

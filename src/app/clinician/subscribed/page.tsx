@@ -110,8 +110,59 @@ export default function SubscribedPage() {
     fetchDiscoverClinicians();
   }, []);
 
-  const handleDelete = (clinicianId: string) => {
-    setSubscribedClinicians(prev => prev.filter(c => c.user_id !== clinicianId));
+  const handleDelete = async (clinicianId: string) => {
+    try {
+      // Get user info and access token
+      const userInfo = localStorage.getItem('user_info');
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!userInfo || !accessToken) {
+        throw new Error('User not authenticated');
+      }
+      
+      const user = JSON.parse(userInfo);
+      
+      // Make API call to unsubscribe
+      const response = await fetch(`${env.BACKEND_URL}/clinicians/unsubscribe`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caregiver_id: user.user_id, // Pass clinician_id in caregiver_id param as requested
+          clinician_id: clinicianId
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please log in again.');
+        } else if (response.status === 403) {
+          throw new Error('Access forbidden. Please check your permissions.');
+        } else if (response.status === 404) {
+          throw new Error('Clinician not found');
+        } else if (response.status === 400) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Bad request');
+        } else {
+          throw new Error(`Failed to unsubscribe: ${response.status}`);
+        }
+      }
+
+      const result = await response.json();
+      console.log('Unsubscription successful:', result);
+
+      // Update local state only after successful API call
+      setSubscribedClinicians(prev => prev.filter(c => c.user_id !== clinicianId));
+
+      // Show success message (you can replace this with a toast notification)
+      alert('Successfully unsubscribed from clinician!');
+      
+    } catch (error) {
+      console.error('Error unsubscribing from clinician:', error);
+      alert(`Failed to unsubscribe: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleMessage = (clinicianId: string) => {

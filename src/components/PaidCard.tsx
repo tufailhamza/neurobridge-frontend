@@ -9,7 +9,7 @@ interface PaidCardProps {
 
 export default function PaidCard({ card }: PaidCardProps) {
   const router = useRouter(); 
-
+console.log('card', card);
   const handleCardClick = () => {
     // Determine the route based on user role (you can get this from localStorage or context)
     const userRole = localStorage.getItem('user_role');
@@ -28,8 +28,8 @@ export default function PaidCard({ card }: PaidCardProps) {
              {/* Huge Image */}
        <div className="w-full h-128 rounded-lg mb-4 overflow-hidden">
          <img 
-           src={card.image_url} 
-           alt={card.title}
+           src={card.image_url || '/placeholder-image.jpg'} 
+           alt={card.title || 'Content'}
            className="w-full h-full object-cover"
            onError={(e) => {
              const target = e.target as HTMLImageElement;
@@ -41,7 +41,7 @@ export default function PaidCard({ card }: PaidCardProps) {
       
       {/* Title */}
       <h3 className="text-lg font-bold text-b mb-4">
-        {card.title}
+        {card.title || 'Untitled Content'}
       </h3>
       
              {/* Author Info Row */}
@@ -53,28 +53,34 @@ export default function PaidCard({ card }: PaidCardProps) {
              </span>
            </div>
            <div>
-             <p className="font-semibold text-gray-900">{card.user_name}</p>
+             <p className="font-semibold text-gray-900">{card.user_name || 'Unknown Author'}</p>
              <p className="text-sm text-gray-600">Author</p>
            </div>
          </div>
          <div className="flex flex-row space-x-2 text-right">
-           <p className="text-sm font-medium text-black">{card.date}</p> 
+           <p className="text-sm font-medium text-black">{card.date || 'No date'}</p> 
            <p>  </p>
-           <p className="text-sm font-medium text-black">{card.read_time}</p>
+           <p className="text-sm font-medium text-black">{card.read_time || 'No read time'}</p>
          </div>
        </div>
       
              {/* Tags and Price Row */}
        <div className="flex justify-between items-center mb-3">
          <div className="flex space-x-2">
-           {card.tags.map((tag, index) => (
-             <span 
-               key={index}
-               className="px-3 py-1 border-b border-2 text-b text-sm rounded-full"
-             >
-               {tag}
+           {card.tags && card.tags.length > 0 ? (
+             card.tags.map((tag, index) => (
+               <span 
+                 key={index}
+                 className="px-3 py-1 border-b border-2 text-b text-sm rounded-full"
+               >
+                 {tag}
+               </span>
+             ))
+           ) : (
+             <span className="px-3 py-1 border-b border-2 text-b text-sm rounded-full">
+               No tags
              </span>
-           ))}
+           )}
          </div>
        </div>
 

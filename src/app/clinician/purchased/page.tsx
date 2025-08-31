@@ -13,23 +13,54 @@ export default function ClinicianPurchasedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch feed data from backend
+  // Fetch purchased content from backend
   useEffect(() => {
-    const fetchFeedData = async () => {
+    const fetchPurchasedData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=20`);
+        setError(null);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch posts: ${response.status}`);
+        // Get user info from localStorage
+        const userInfo = localStorage.getItem('user_info');
+        if (!userInfo) {
+          throw new Error('User not authenticated');
         }
         
+        const user = JSON.parse(userInfo);
+        const accessToken = localStorage.getItem('access_token');
+        
+        if (!accessToken) {
+          throw new Error('No access token found');
+        }
+
+        // Fetch purchased content for the current user
+        const response = await fetch(`${env.BACKEND_URL}/stripe/purchases/${user.user_id}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized. Please log in again.');
+          } else if (response.status === 403) {
+            throw new Error('Access forbidden. Please check your permissions.');
+          } else if (response.status === 404) {
+            // No purchases found, set empty array
+            setpaidCards([]);
+            return;
+          } else {
+            throw new Error(`Failed to fetch purchases: ${response.status}`);
+          }
+        }
+
         const data = await response.json();
-        setpaidCards(data.results || data || []);
-        setError(null);
+        console.log('Purchased data from backend:', data);
+        setpaidCards(data || []);
       } catch (err) {
-        console.error('Error fetching feed data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch feed data');
+        console.error('Error fetching purchased data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch purchased data');
         // Fallback to empty array if API fails
         setpaidCards([]);
       } finally {
@@ -37,7 +68,7 @@ export default function ClinicianPurchasedPage() {
       }
     };
 
-    fetchFeedData();
+    fetchPurchasedData();
   }, []);
 
   return (
@@ -53,10 +84,10 @@ export default function ClinicianPurchasedPage() {
           <div className=" rounded-lg h-full">
             <div className="flex space-x-4 mb-6">
                 <div className="bg-b text-white px-4 py-2 rounded-full">
-                    My Feed
+                    My Purchases
                 </div>
                 <div className="border-2 border-b text-b px-4 py-2 rounded-full">
-                    Discover
+                    All Content
                 </div>
             </div>
             {/* Scrollable Cards List */}
@@ -65,7 +96,7 @@ export default function ClinicianPurchasedPage() {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-b mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading feed...</p>
+                    <p className="text-gray-600">Loading purchased content...</p>
                   </div>
                 </div>
               ) : error ? (
@@ -80,7 +111,7 @@ export default function ClinicianPurchasedPage() {
                 </div>
               ) : paidCards.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No posts found.</p>
+                  <p className="text-gray-600">No purchased content found.</p>
                 </div>
               ) : (
                 paidCards.map((card) => (

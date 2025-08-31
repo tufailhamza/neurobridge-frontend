@@ -69,12 +69,30 @@ export default function CaregiverSidebar() {
     }
   };
 
-  // Mock user data - in real app, get from context or localStorage
-  const userInfo = {
+  // Get user data from localStorage
+  const [userInfo, setUserInfo] = useState({
     firstName: 'Jane',
     lastName: 'Smith',
-    profileImage: null // Set to null to show initials
-  };
+    profileImage: null as string | null,
+    bio: null as string | null
+  });
+
+  useEffect(() => {
+    try {
+      const userMetadata = localStorage.getItem('user_metadata');
+      if (userMetadata) {
+        const parsed = JSON.parse(userMetadata);
+        setUserInfo({
+          firstName: parsed.first_name || 'Jane',
+          lastName: parsed.last_name || 'Smith',
+          profileImage: parsed.profile_image,
+          bio: parsed.bio
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing user metadata:', error);
+    }
+  }, []);
 
   const handleProfileClick = () => {
     router.push('/caregiver/profile');
@@ -167,6 +185,20 @@ export default function CaregiverSidebar() {
                 </div>
               )}
             </button>
+
+            {/* Profile Bio Section */}
+            {(!userInfo.profileImage || !userInfo.bio) && (
+              <div className="mt-3 flex flex-col items-start p-4 gap-2 bg-[#FEFEFE] border border-[#01B8FA] rounded-lg">
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {!userInfo.profileImage && !userInfo.bio 
+                    ? 'Add a photo and a bio to your profile so others can get to know you.'
+                    : !userInfo.profileImage 
+                    ? 'Add a profile photo to your profile so others can get to know you.'
+                    : 'Add a bio to your profile so others can get to know you.'
+                  }
+                </p>
+              </div>
+            )}
           </div>
         </nav>
       </div>

@@ -13,6 +13,7 @@ interface LoginResponse {
     email: string;
     name: string;
     role: string;
+    metadata: any;
   };
   role: string;
 }
@@ -53,6 +54,7 @@ export default function LoginPage() {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user_role', data.role);
       localStorage.setItem('user_info', JSON.stringify(data.user));
+      localStorage.setItem('user_metadata', JSON.stringify(data.user.metadata));
       
       // Route based on role
       if (data.user.role === 'clinician') {

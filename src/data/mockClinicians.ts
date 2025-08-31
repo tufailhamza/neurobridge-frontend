@@ -15,7 +15,9 @@ export const mockClinicians: Clinician[] = [
       zip_code: '10001',
       clinician_type: 'SLP',
       license_number: 'LIC12345',
-      area_of_expertise: 'Articulation & Phonological Disorders'
+      area_of_expertise: 'Articulation & Phonological Disorders',
+      bio: 'Specialized in pediatric speech and language development with over 10 years of experience.',
+      approach: 'Evidence-based therapy using play-based interventions and family-centered care.'
     },
     {
       user_id: '2',
@@ -31,7 +33,9 @@ export const mockClinicians: Clinician[] = [
       zip_code: '90001',
       clinician_type: 'BCBA',
       license_number: 'LIC54321',
-      area_of_expertise: 'Behavior Intervention Plans'
+      area_of_expertise: 'Behavior Intervention Plans',
+      bio: 'Board Certified Behavior Analyst specializing in autism spectrum disorders and behavioral challenges.',
+      approach: 'Applied Behavior Analysis with positive reinforcement and data-driven interventions.'
     },
     {
       user_id: '3',
@@ -47,7 +51,9 @@ export const mockClinicians: Clinician[] = [
       zip_code: '60601',
       clinician_type: 'OTR',
       license_number: 'LIC67890',
-      area_of_expertise: 'Adaptive Living Skills'
+      area_of_expertise: 'Adaptive Living Skills',
+      bio: 'Occupational therapist focused on helping children develop essential life skills and independence.',
+      approach: 'Holistic therapy combining sensory integration and functional activities for daily living.'
     },
     {
       user_id: '4',
@@ -63,7 +69,9 @@ export const mockClinicians: Clinician[] = [
       zip_code: '77001',
       clinician_type: 'PT',
       license_number: 'LIC11111',
-      area_of_expertise: 'Gross Motor Skill Development'
+      area_of_expertise: 'Gross Motor Skill Development',
+      bio: 'Physical therapist specializing in pediatric rehabilitation and motor development.',
+      approach: 'Movement-based therapy with emphasis on strength, balance, and coordination development.'
     },
     {
       user_id: '5',
@@ -79,6 +87,8 @@ export const mockClinicians: Clinician[] = [
       zip_code: '85001',
       clinician_type: 'OTR',
       license_number: 'LIC22222',
-      area_of_expertise: 'Sensory Processing Disorders (SPD)'
+      area_of_expertise: 'Sensory Processing Disorders (SPD)',
+      bio: 'Specialized in sensory processing disorders and sensory integration therapy.',
+      approach: 'Individualized sensory diets and environmental modifications for optimal functioning.'
     }
   ];

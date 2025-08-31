@@ -72,7 +72,7 @@ export default function FeedCard({ card }: FeedCardProps) {
       )}
       
       {/* Title */}
-      <h3 className="text-lg font-bold text-b mb-4">
+      <h3 className="text-2xl font-bold text-b mb-4">
         {card.title}
       </h3>
       

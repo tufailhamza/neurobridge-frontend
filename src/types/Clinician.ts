@@ -13,6 +13,8 @@ export interface Clinician {
   clinician_type: ClinicianType;
   license_number: string;
   area_of_expertise: AreaOfExpertiseClinician;
+  bio: string;
+  approach: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
