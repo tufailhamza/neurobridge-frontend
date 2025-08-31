@@ -8,6 +8,8 @@ import EditAreaOfExpertiseModal from '@/components/EditAreaOfExpertiseModal';
 import ImageUpload from '@/components/ImageUpload';
 import ContentPreferences from '@/components/ContentPreferences';
 import ContentPreferencesModal from '@/components/ContentPreferencesModal';
+import ProfilePhotoModal from '@/components/ProfilePhotoModal';
+import CoverImageModal from '@/components/CoverImageModal';
 import { env } from '@/config/env';
 
 // EditApproachModal Component
@@ -223,6 +225,7 @@ interface ClinicianProfile {
   profile_type: string;
   specialty: string;
   profile_image: string | null;
+  cover_image: string | null;
   is_subscribed: boolean;
   prefix: string;
   first_name: string;
@@ -272,6 +275,8 @@ export default function ClinicianProfilePage() {
   const [isAreaOfExpertiseModalOpen, setIsAreaOfExpertiseModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isContentPreferencesModalOpen, setIsContentPreferencesModalOpen] = useState(false);
+  const [isProfilePhotoModalOpen, setIsProfilePhotoModalOpen] = useState(false);
+  const [isCoverImageModalOpen, setIsCoverImageModalOpen] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [contentPreferences, setContentPreferences] = useState<string[]>([]);
@@ -303,6 +308,7 @@ export default function ClinicianProfilePage() {
           const data = await response.json();
           setClinicianData(data);
           setProfileImage(data.profile_image);
+          setCoverImage(data.cover_image);
           setContentPreferences(data.content_preferences_tags || []);
         } else {
           // Check if response is JSON before trying to parse it
@@ -433,18 +439,146 @@ export default function ClinicianProfilePage() {
     }
   };
 
-  const handleProfileImageChange = (file: File) => {
-    const imageUrl = URL.createObjectURL(file);
-    setProfileImage(imageUrl);
-    // Here you would typically upload to backend
-    console.log('Uploading profile image:', file);
+  const handleProfileImageChange = async (file: File | null) => {
+    try {
+      // Get user info from localStorage
+      const userInfo = localStorage.getItem('user_info');
+      const userId = JSON.parse(userInfo || '{}').user_id;
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!userId || !accessToken) {
+        alert('User not authenticated. Please login again.');
+        return;
+      }
+
+      let imageData = null;
+      if (file) {
+        // Convert file to base64 string
+        const reader = new FileReader();
+        imageData = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Make API call to update profile with base64 image
+      const response = await fetch(`${env.BACKEND_URL}/profile/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify({
+          profile_image: imageData
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Profile updated successfully:', result);
+        
+        // Update local state
+        if (file) {
+          const imageUrl = URL.createObjectURL(file);
+          setProfileImage(imageUrl);
+          if (clinicianData) {
+            setClinicianData({
+              ...clinicianData,
+              profile_image: imageUrl
+            });
+          }
+        } else {
+          setProfileImage(null);
+          if (clinicianData) {
+            setClinicianData({
+              ...clinicianData,
+              profile_image: null
+            });
+          }
+        }
+        alert('Profile image updated successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to update profile:', errorData);
+        alert(`Failed to update profile: ${errorData.detail || `Status: ${response.status}`}`);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile. Please try again.');
+    }
   };
 
-  const handleCoverImageChange = (file: File) => {
-    const imageUrl = URL.createObjectURL(file);
-    setCoverImage(imageUrl);
-    // Here you would typically upload to backend
-    console.log('Uploading cover image:', file);
+  const handleCoverImageChange = async (file: File | null) => {
+    try {
+      // Get user info from localStorage
+      const userInfo = localStorage.getItem('user_info');
+      const userId = JSON.parse(userInfo || '{}').user_id;
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!userId || !accessToken) {
+        alert('User not authenticated. Please login again.');
+        return;
+      }
+
+      let imageData = null;
+      if (file) {
+        // Convert file to base64 string
+        const reader = new FileReader();
+        imageData = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Make API call to update profile with base64 image
+      const response = await fetch(`${env.BACKEND_URL}/profile/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify({
+          cover_image: imageData
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Profile updated successfully:', result);
+        
+        // Update local state
+        if (file) {
+          const imageUrl = URL.createObjectURL(file);
+          setCoverImage(imageUrl);
+          if (clinicianData) {
+            setClinicianData({
+              ...clinicianData,
+              cover_image: imageUrl
+            });
+          }
+        } else {
+          setCoverImage(null);
+          if (clinicianData) {
+            setClinicianData({
+              ...clinicianData,
+              cover_image: null
+            });
+          }
+        }
+        alert('Cover image updated successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to update profile:', errorData);
+        alert(`Failed to update profile: ${errorData.detail || `Status: ${response.status}`}`);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile. Please try again.');
+    }
   };
 
   const handleContentPreferencesEdit = () => {
@@ -558,17 +692,14 @@ export default function ClinicianProfilePage() {
               )}
               
               {/* Edit Icon for Cover */}
-              <ImageUpload
-                currentImage={coverImage}
-                onImageChange={handleCoverImageChange}
-                className="absolute top-4 right-4 z-10"
+              <button 
+                onClick={() => setIsCoverImageModalOpen(true)}
+                className="absolute top-4 right-4 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all border border-gray-200 cursor-pointer"
               >
-                <button className="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all border border-gray-200 cursor-pointer">
-                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-              </ImageUpload>
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
                 
               {/* Profile Icon - Overlapping */}
               <div className="absolute bottom-0 left-8 transform translate-y-1/2">
@@ -595,17 +726,14 @@ export default function ClinicianProfilePage() {
                   </div>
                   
                   {/* Edit Icon for Profile */}
-                  <ImageUpload
-                    currentImage={profileImage}
-                    onImageChange={handleProfileImageChange}
-                    className="absolute -top-1 -right-1 z-10"
+                  <button 
+                    onClick={() => setIsProfilePhotoModalOpen(true)}
+                    className="absolute -top-1 -right-1 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all border border-gray-200 cursor-pointer"
                   >
-                    <button className="bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all border border-gray-200 cursor-pointer">
-                      <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  </ImageUpload>
+                    <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -806,6 +934,24 @@ export default function ClinicianProfilePage() {
         onClose={() => setIsLanguageModalOpen(false)}
         currentLanguages={clinicianData.languages ? clinicianData.languages.split(', ').filter(lang => lang.trim()) : []}
         onSave={handleLanguageSave}
+      />
+
+      {/* Profile Photo Modal */}
+      <ProfilePhotoModal
+        isOpen={isProfilePhotoModalOpen}
+        onClose={() => setIsProfilePhotoModalOpen(false)}
+        currentImage={profileImage}
+        onSave={handleProfileImageChange}
+        firstName={clinicianData.first_name}
+        lastName={clinicianData.last_name}
+      />
+
+      {/* Cover Image Modal */}
+      <CoverImageModal
+        isOpen={isCoverImageModalOpen}
+        onClose={() => setIsCoverImageModalOpen(false)}
+        currentImage={coverImage}
+        onSave={handleCoverImageChange}
       />
     </div>
   );
