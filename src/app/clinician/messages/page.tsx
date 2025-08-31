@@ -729,6 +729,23 @@ function MessagesContent() {
         await handleContactClick(newContact);
     };
 
+    // Function to exit create message mode
+    const handleExitCreateMessage = () => {
+        setIsCreateMessageMode(false);
+        setSearchQuery('');
+        setShowClinicianDropdown(false);
+    };
+
+    // Function to handle creating a new message
+    const handleCreateMessage = () => {
+        setIsCreateMessageMode(true);
+        setSelectedContact(null);
+        // Fetch clinicians when entering create message mode
+        if (clinicians.length === 0) {
+            fetchClinicians();
+        }
+    };
+
     return (
         <div className="h-screen bg-d">
             <ClinicianSidebar />
@@ -737,6 +754,12 @@ function MessagesContent() {
                 <div className="pt-4 pr-4 pb-6 bg-white flex justify-between items-center">
                     <h2 className="text-4xl font-black text-b">Messages</h2>
                     <div className="flex items-center space-x-4">
+                        <button 
+                            onClick={handleCreateMessage}
+                            className='bg-a p-3 rounded-xl px-5'
+                        >
+                            +  Create Message
+                        </button>
                     </div>
                 </div>
 
@@ -788,7 +811,107 @@ function MessagesContent() {
                     
                     {/* Messaging Section */}
                     <div className="w-7/10 flex border rounded-xl m-3 flex-col bg-white">
-                        {selectedContact ? (
+                        {isCreateMessageMode ? (
+                            // Create Message Mode - Show Clinician Search
+                            <>
+                                {/* Create Message Header */}
+                                <div className="px-6 py-4 flex justify-between items-center border-b border-gray-200">
+                                    <div className="font-semibold text-lg text-gray-900">Create New Message</div>
+                                    <button 
+                                        onClick={handleExitCreateMessage}
+                                        className="text-gray-600 hover:text-gray-900 transition-colors"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                
+                                {/* Clinician Search Area */}
+                                <div className="flex-1 p-6">
+                                    <div className="max-w-2xl mx-auto">
+                                        <h3 className="text-xl font-medium text-gray-900 mb-4">
+                                            Search for a Clinician
+                                        </h3>
+                                        <p className="text-gray-600 mb-6">
+                                            Find a clinician by name, specialty, or location to start a conversation.
+                                        </p>
+                                        
+                                        {/* Search Input */}
+                                        <div className="relative">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                                                <input
+                                                    type="text"
+                                                    value={searchQuery}
+                                                    onChange={(e) => handleSearchChange(e.target.value)}
+                                                    onFocus={() => setShowClinicianDropdown(true)}
+                                                    placeholder="Search by name, specialty, or location..."
+                                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-b focus:border-transparent"
+                                                />
+                                            </div>
+                                            
+                                            {/* Clinicians Dropdown */}
+                                            {showClinicianDropdown && (
+                                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto z-10">
+                                                    {isLoadingClinicians ? (
+                                                        <div className="p-4 text-center text-gray-500">
+                                                            Loading clinicians...
+                                                        </div>
+                                                    ) : filteredClinicians.length > 0 ? (
+                                                        filteredClinicians.map((clinician) => (
+                                                            <div
+                                                                key={clinician.user_id}
+                                                                onClick={() => handleClinicianSelect(clinician)}
+                                                                className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                                            >
+                                                                <div className="flex items-center">
+                                                                    {/* Avatar */}
+                                                                    <div className="w-10 h-10 rounded-full bg-b flex items-center justify-center mr-3">
+                                                                        <div className="text-sm font-bold text-white">
+                                                                            {clinician.first_name[0]}{clinician.last_name[0]}
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    {/* Clinician Info */}
+                                                                    <div className="flex-1">
+                                                                        <div className="font-medium text-gray-900">
+                                                                            {clinician.prefix} {clinician.first_name} {clinician.last_name}
+                                                                        </div>
+                                                                        <div className="text-sm text-gray-600">
+                                                                            {clinician.specialty} • {clinician.clinician_type}
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-500">
+                                                                            {clinician.city}, {clinician.state}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : searchQuery ? (
+                                                        <div className="p-4 text-center text-gray-500">
+                                                            No clinicians found matching "{searchQuery}"
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-4 text-center text-gray-500">
+                                                            Start typing to search for clinicians
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Instructions */}
+                                        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                                            <h4 className="font-medium text-gray-900 mb-2">How it works:</h4>
+                                            <ul className="text-sm text-gray-600 space-y-1">
+                                                <li>• Search for clinicians by name, specialty, or location</li>
+                                                <li>• Click on a clinician to start a conversation</li>
+                                                <li>• Your new contact will be added to your contacts list</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : selectedContact ? (
                             <>
                                 <div className="px-6 py-4 flex justify-between items-center border-b-2 border-gray-200">
                                     <div className="flex items-center">
@@ -797,7 +920,7 @@ function MessagesContent() {
                                                 {selectedContact.name.split(' ').map(word => word[0]).join('')}
                                             </div>
                                         </div>
-                                    <div className="font-semibold text-lg text-gray-900">{selectedContact.name}</div>
+                                        <div className="font-semibold text-lg text-gray-900">{selectedContact.name}</div>
                                     </div>
                                     <div className="flex items-center space-x-4">
                                         <button className="text-gray-600 hover:text-gray-900 transition-colors">
