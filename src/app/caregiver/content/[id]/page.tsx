@@ -170,6 +170,28 @@ export default function ContentPage() {
     router.push('/caregiver/purchased');
   };
 
+  // Function to get preview content (first 20% of the content)
+  const getPreviewContent = (htmlContent: string): string => {
+    // Simple approach: take first 1000 characters or first few paragraphs
+    const maxLength = Math.min(1000, Math.floor(htmlContent.length * 0.2));
+    
+    // Try to end at a sentence boundary
+    let preview = htmlContent.substring(0, maxLength);
+    
+    // Try to end at a sentence boundary
+    const lastPeriod = preview.lastIndexOf('.');
+    const lastParagraph = preview.lastIndexOf('</p>');
+    
+    if (lastParagraph > lastPeriod && lastParagraph > maxLength * 0.8) {
+      preview = preview.substring(0, lastParagraph + 4);
+    } else if (lastPeriod > maxLength * 0.8) {
+      preview = preview.substring(0, lastPeriod + 1);
+    }
+    
+    // Add "..." suffix to indicate there's more content
+    return preview + '...';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-d">
@@ -205,10 +227,30 @@ export default function ContentPage() {
           <div className="bg-white rounded-lg shadow-md p-8">            
             {/* Render the HTML content */}
             {card.html_content ? (
-              <div 
-                dangerouslySetInnerHTML={{ __html: card.html_content }}
-                className="content-html max-w-none text-gray-900"
-              />
+              <div>
+                {hasPurchased || card.price === 0 ? (
+                  // Show full content if purchased or free
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: card.html_content }}
+                    className="content-html max-w-none text-gray-900"
+                  />
+                ) : (
+                  // Show preview content for paid posts
+                  <div>
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: getPreviewContent(card.html_content) }}
+                      className="content-html max-w-none text-gray-900"
+                    />
+                    <div className="mt-8 p-6 bg-gray-200 py-32 rounded-lg border-2 border-gray-200">
+                      <div className="text-center">
+                      <h3 className="text-xl  text-gray-900 mb-3">
+                          Continue reading by purchasing full access to this article
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-900 text-lg">No content available</p>
