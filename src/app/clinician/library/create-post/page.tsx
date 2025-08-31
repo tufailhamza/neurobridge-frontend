@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import ClinicianSidebar from '../../sidebar';
 import { Collection } from '@/types/Collection';
 import { env } from '@/config/env';
+import { useToastUtils } from '@/utils/toast';
 
 // Dynamically import TiptapEditor to avoid SSR issues
 const TiptapEditor = dynamic(() => import('@/components/TiptapEditor'), {
@@ -15,10 +16,10 @@ const TiptapEditor = dynamic(() => import('@/components/TiptapEditor'), {
 
 export default function CreatePostPage() {
   const router = useRouter();
+  const { showSuccess, showSystemError } = useToastUtils();
   const [title, setTitle] = useState('Title goes here');
   const [content, setContent] = useState('');
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-  const [coverImagePreview, setCoverImagePreview] = useState<string>('');
+  // Remove cover image specific state - will be handled by attachments
   const [tags, setTags] = useState<string[]>([]);
   const [price, setPrice] = useState(0);
   const [allowComments, setAllowComments] = useState(true);
@@ -40,6 +41,23 @@ export default function CreatePostPage() {
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
+
+  // Helper function to get cover image (single attachment)
+  const getCoverImage = () => {
+    if (attachmentFiles.length > 0 && attachmentFiles[0].type.startsWith('image/')) {
+      return {
+        file: attachmentFiles[0],
+        preview: attachmentPreviews[0]
+      };
+    }
+    return null;
+  };
+
+  // Helper function to get cover image preview for display
+  const getCoverImagePreview = () => {
+    const coverImage = getCoverImage();
+    return coverImage ? coverImage.preview : '';
+  };
 
   // Function to fetch user collections
   const fetchUserCollections = async () => {
@@ -84,7 +102,16 @@ export default function CreatePostPage() {
       if (draft) {
         setTitle(draft.title);
         setContent(draft.content);
-        setCoverImagePreview(draft.coverImageUrl || '');
+                 // Load cover image from attachments if available
+         if (draft.attachments && draft.attachments.length > 0) {
+           const coverImage = draft.attachments.find((preview: string) => preview.startsWith('data:'));
+           if (coverImage) {
+             // Create a mock file object for the cover image
+             const mockFile = new File([''], 'cover_image.jpg', { type: 'image/jpeg' });
+             setAttachmentFiles([mockFile]);
+             setAttachmentPreviews([coverImage]);
+           }
+         }
         setTags(draft.tags || []);
         setPrice(draft.price || 0);
         setAllowComments(draft.allowComments !== undefined ? draft.allowComments : true);
@@ -269,31 +296,25 @@ export default function CreatePostPage() {
   };
 
   // File upload handlers
-  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setCoverImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setCoverImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      setAttachmentFiles(prev => [...prev, ...files]);
+      // Only allow one file - replace any existing file
+      const file = files[0];
+      setAttachmentFiles([file]);
       
-      // Create previews for new files
-      files.forEach(file => {
+      // Create preview for the single file
+      if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          setAttachmentPreviews(prev => [...prev, e.target?.result as string]);
+          setAttachmentPreviews([e.target?.result as string]);
+          // Show success message for cover image
+          showSuccess('Cover image set!', 'Image will be used as cover');
         };
         reader.readAsDataURL(file);
-      });
+      } else {
+        setAttachmentPreviews([file.name]);
+      }
     }
   };
 
@@ -316,7 +337,7 @@ export default function CreatePostPage() {
           id: parseInt(draftId),
           title: title.trim() || 'Untitled Draft',
           content: content,
-          coverImageUrl: coverImagePreview,
+          coverImageUrl: getCoverImagePreview(), // Use the helper function
           tags,
           price: tier === 'paid' ? price : 0,
           allowComments,
@@ -335,7 +356,7 @@ export default function CreatePostPage() {
           id: Date.now(), // Use timestamp as temporary ID
           title: title.trim() || 'Untitled Draft',
           content: content,
-          coverImageUrl: coverImagePreview,
+          coverImageUrl: getCoverImagePreview(), // Use the helper function
           tags,
           price: tier === 'paid' ? price : 0,
           allowComments,
@@ -366,10 +387,13 @@ export default function CreatePostPage() {
       localStorage.setItem('clinician_drafts', JSON.stringify(updatedDrafts));
       
       console.log('Draft saved:', draft);
-      alert(draftId ? 'Draft updated successfully!' : 'Draft saved successfully!');
+      showSuccess(
+        draftId ? 'Draft updated successfully!' : 'Draft saved successfully!',
+        'Your changes have been saved'
+      );
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Failed to save draft');
+      showSystemError('Failed to save draft', 'Please try again');
     } finally {
       setIsSaving(false);
     }
@@ -377,14 +401,14 @@ export default function CreatePostPage() {
 
   const handlePublish = async () => {
     if (!title.trim() || !content.trim()) {
-      alert('Please fill in both title and content before publishing');
+      showSystemError('Missing required fields', 'Please fill in both title and content before publishing');
       return;
     }
 
     // Validate scheduled date if scheduling is enabled
     if (isScheduled) {
       if (!scheduledDate || !scheduledTime) {
-        alert('Please set a scheduled date and time');
+        showSystemError('Missing schedule information', 'Please set a scheduled date and time');
         return;
       }
       
@@ -392,7 +416,7 @@ export default function CreatePostPage() {
       const now = new Date();
       
       if (scheduledDateTime <= now) {
-        alert('Scheduled date must be in the future');
+        showSystemError('Invalid schedule', 'Scheduled date must be in the future');
         return;
       }
     }
@@ -402,9 +426,10 @@ export default function CreatePostPage() {
       // Create FormData for multipart/form-data submission
       const formData = new FormData();
       
-      // Add image file if selected
-      if (coverImageFile) {
-        formData.append('image', coverImageFile);
+      // Add cover image file (first image attachment) if selected
+      const coverImage = getCoverImage();
+      if (coverImage) {
+        formData.append('image', coverImage.file);
       }
       
       // Add other form fields
@@ -449,9 +474,12 @@ export default function CreatePostPage() {
       console.log('Post published successfully:', result);
       
       if (isScheduled) {
-        alert(`Post scheduled successfully! It will be published on ${formatScheduledDate()}`);
+        showSuccess(
+          `Post scheduled successfully!`,
+          `It will be published on ${formatScheduledDate()}`
+        );
       } else {
-        alert('Post published successfully!');
+        showSuccess('Post published successfully!', 'Your content is now live');
       }
       
       // Redirect to home page after successful publishing
@@ -459,7 +487,7 @@ export default function CreatePostPage() {
       
     } catch (error) {
       console.error('Error publishing post:', error);
-      alert('Failed to publish post. Please try again.');
+      showSystemError('Failed to publish post', 'Please try again');
     } finally {
       setIsPublishing(false);
     }
@@ -475,71 +503,21 @@ export default function CreatePostPage() {
         {/* Column B - Main Content */}
         <div className="w-4/5 p-6 bg-d">
           <div className="bg-white rounded-xl  ">
+            {/* Back Button */}
+            <button
+              type="button"
+              className="flex items-center text-b text-lg font-bold mb-2  focus:outline-none"
+              onClick={() => router.back()}
+            >
+              <span className="mr-2">&larr;</span>Back
+            </button>
             {/* Page Title */}
             {isEditingDraft && (
               <div className="p-6 border-b border-gray-200">
                 <h1 className="text-2xl font-bold text-gray-900">Edit Draft</h1>
               </div>
             )}
-            {/* Cover Image Section */}
-            <div className="p-6 border-1 rounded-md border-gray-200">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Cover Image</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Upload a cover image for your post (JPG, JPEG, PNG, GIF)
-                  </p>
-                </div>
-                
-                {/* Cover Image Upload */}
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    id="coverImageFile"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setCoverImageFile(file);
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          setCoverImagePreview(e.target?.result as string);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="hidden"
-                  />
-                  
-                  <button
-                    onClick={() => document.getElementById('coverImageFile')?.click()}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
-                  >
-                    {coverImageFile ? 'Change Cover Image' : 'Click to upload cover image'}
-                  </button>
-                  
-                  {/* Cover Image Preview */}
-                  {coverImagePreview && (
-                    <div className="relative">
-                      <img 
-                        src={coverImagePreview} 
-                        alt="Cover preview" 
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => {
-                          setCoverImageFile(null);
-                          setCoverImagePreview('');
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+
 
             {/* Attachments Section */}
             <div className="p-6 border-1 rounded-md border-gray-200">
@@ -547,7 +525,7 @@ export default function CreatePostPage() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-gray-900">Attachments</h3>
                   <p className="text-sm text-gray-500">
-                    Upload additional files (JPG, JPEG, PNG, PDF, GIF Max 2GB)
+                    Upload a single file (JPG, JPEG, PNG, PDF, GIF Max 2GB). Image files will be used as cover.
                   </p>
                 </div>
                 <button 
@@ -559,6 +537,35 @@ export default function CreatePostPage() {
               </div>
               
               <div className="space-y-3">
+                {/* Cover Image Preview */}
+                {/* {getCoverImagePreview() && (
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Cover Image Preview:</h4>
+                    <div className="relative">
+                      <img 
+                        src={getCoverImagePreview()} 
+                        alt="Cover preview" 
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => {
+                          const coverImage = getCoverImage();
+                          if (coverImage) {
+                            const index = attachmentFiles.findIndex(f => f === coverImage.file);
+                            if (index !== -1) {
+                              setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+                              setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
+                            }
+                          }
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )} */}
+
                 {/* Attachments Upload */}
                 <div className="space-y-3">
                   <div>
@@ -566,61 +573,67 @@ export default function CreatePostPage() {
                       type="file"
                       id="attachmentFiles"
                       accept="image/*,video/*,.pdf,.doc,.docx"
-                      multiple
-                      onChange={(e) => {
+                                              onChange={(e) => {
                         const files = Array.from(e.target.files || []);
-                        setAttachmentFiles(prev => [...prev, ...files]);
-                        
-                        // Create previews for new files
-                        files.forEach(file => {
+                        if (files.length > 0) {
+                          // Only allow one file - replace any existing file
+                          const file = files[0];
+                          setAttachmentFiles([file]);
+                          
+                          // Create preview for the single file
                           if (file.type.startsWith('image/')) {
                             const reader = new FileReader();
                             reader.onload = (e) => {
-                              setAttachmentPreviews(prev => [...prev, e.target?.result as string]);
+                              setAttachmentPreviews([e.target?.result as string]);
+                              // Show success message for cover image
+                              showSuccess('Cover image set!', 'Image will be used as cover');
                             };
                             reader.readAsDataURL(file);
                           } else {
-                            setAttachmentPreviews(prev => [...prev, file.name]);
+                            setAttachmentPreviews([file.name]);
                           }
-                        });
+                        }
                       }}
                       className="hidden"
                     />
                    
                   </div>
                   
-                  {/* Attachment Previews */}
+                  {/* Attachment Preview */}
                   {attachmentPreviews.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-gray-900">Attachments:</h4>
-                      {attachmentPreviews.map((preview, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                          <div className="flex items-center space-x-2">
-                            {preview.startsWith('data:') ? (
-                              <img src={preview} alt="Preview" className="w-8 h-8 object-cover rounded" />
-                            ) : preview.startsWith('http') ? (
-                              <img src={preview} alt="Image" className="w-8 h-8 object-cover rounded" />
-                            ) : (
-                              <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
-                                <span className="text-xs text-gray-500">📎</span>
+                      {attachmentPreviews.map((preview, index) => {
+                        const isCoverImage = preview.startsWith('data:') && attachmentFiles[index]?.type.startsWith('image/');
+                        return (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                            <div className="flex items-center space-x-2">
+                              {preview.startsWith('data:') ? (
+                                <img src={preview} alt="Preview" className="w-8 h-8 object-cover rounded" />
+                              ) : preview.startsWith('http') ? (
+                                <img src={preview} alt="Image" className="w-8 h-8 object-cover rounded" />
+                              ) : (
+                                <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">📎</span>
+                                </div>
+                              )}
+                              <div className="flex flex-col">
+                                {isCoverImage && (
+                                  <span className="text-xs text-b font-medium">Cover Image</span>
+                                )}
                               </div>
-                            )}
-                            <span className="text-sm text-gray-700">
-                              {preview.startsWith('data:') ? `File ${index + 1}` : 
-                               preview.startsWith('http') ? `Image ${index + 1}` : preview}
-                            </span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setAttachmentFiles([]);
+                                setAttachmentPreviews([]);
+                              }}
+                              className="text-b text-3xl"
+                            >
+                              ×
+                            </button>
                           </div>
-                          <button
-                            onClick={() => {
-                              setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
-                              setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
-                            }}
-                            className="text-red-500 hover:text-red-700 text-sm"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
