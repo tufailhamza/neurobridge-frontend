@@ -278,20 +278,45 @@ export default function CaregiverProfilePage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h1 className="text-3xl font-bold text-b">{caregiverData.first_name} {caregiverData.last_name}</h1>
-                  <p className="text-gray-600 text-lg">@{caregiverData.username}</p>
-                  <p className="text-gray-500">{caregiverData.city}, {caregiverData.state}</p>
-                  {caregiverData.caregiver_role && (
-                    <p className="text-gray-500 text-sm mt-1">Role: {caregiverData.caregiver_role}</p>
-                  )}
-                  {caregiverData.childs_age > 0 && (
-                    <p className="text-gray-500 text-sm">Child's Age: {caregiverData.childs_age} years</p>
-                  )}
-                  {caregiverData.diagnosis && caregiverData.diagnosis !== 'Not specified' && (
-                    <p className="text-gray-500 text-sm">Diagnosis: {caregiverData.diagnosis}</p>
-                  )}
-                  {caregiverData.years_of_diagnosis > 0 && (
-                    <p className="text-gray-500 text-sm">Years of Diagnosis: {caregiverData.years_of_diagnosis}</p>
-                  )}
+                  <p className="text-gray-400 text-lg">@{caregiverData.username}</p>
+                  <p className="text-gray-900">{caregiverData.city}, {caregiverData.state}</p>
+                  
+                  {/* Info Cards Row */}
+                  <div className="mt-8">
+                    <div className="flex flex-wrap gap-4">
+                      {/* Relationship Card */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-2 flex flex-col min-w-[120px] max-w-xs">
+                        <div className="text-lg font-bold text-b mb-1 break-words">
+                          {caregiverData.caregiver_role || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-600">Relationship</div>
+                      </div>
+
+                      {/* Age Card */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-2 flex flex-col min-w-[80px] max-w-xs">
+                        <div className="text-lg font-bold text-b mb-1">
+                          {caregiverData.childs_age > 0 ? caregiverData.childs_age : 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-600">Age</div>
+                      </div>
+
+                      {/* Diagnosis Card */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-2 flex flex-col min-w-[120px] max-w-sm">
+                        <div className="text-lg font-bold text-b mb-1 break-words">
+                          {caregiverData.diagnosis && caregiverData.diagnosis !== 'Not specified' ? caregiverData.diagnosis : 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-600">Diagnosis</div>
+                      </div>
+
+                      {/* Year of Diagnosis Card */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-2 flex flex-col min-w-[120px] max-w-xs">
+                        <div className="text-lg font-bold text-b mb-1">
+                          {caregiverData.years_of_diagnosis > 0 ? caregiverData.years_of_diagnosis : 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-600">Year of Diagnosis</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(true)}
@@ -316,12 +341,14 @@ export default function CaregiverProfilePage() {
                     </svg>
                   </button>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gray-50 rounded-lg py-4">
                   <p className="text-black">
                     {caregiverData.bio || "Tell us about yourself..."}
                   </p>
                 </div>
               </div>
+
+
             </div>
           </div>
         </div>
