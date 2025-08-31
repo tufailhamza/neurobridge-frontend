@@ -158,10 +158,52 @@ export default function CaregiverProfilePage() {
     setIsContentPreferencesModalOpen(true);
   };
 
-  const handleContentPreferencesSave = (newPreferences: string[]) => {
-    setContentPreferences(newPreferences);
-    // Here you would typically save to backend
-    console.log('Saving content preferences:', newPreferences);
+  const handleContentPreferencesSave = async (newPreferences: string[]) => {
+    try {
+      // Get user_id and access_token from localStorage
+      const userInfo = localStorage.getItem('user_info');
+      const userId = JSON.parse(userInfo || '{}').user_id;
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!userId || !accessToken) {
+        alert('User not authenticated. Please login again.');
+        return;
+      }
+
+      // Make API call to update profile with content preferences
+      const response = await fetch(`${env.BACKEND_URL}/profile/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify({
+          content_preferences_tags: newPreferences
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Profile updated successfully:', result);
+        
+        // Update local state
+        setContentPreferences(newPreferences);
+        if (caregiverData) {
+          setCaregiverData({
+            ...caregiverData,
+            content_preferences_tags: newPreferences
+          });
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to update profile:', errorData);
+        alert(`Failed to update profile: ${errorData.detail || `Status: ${response.status}`}`);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile. Please try again.');
+    }
   };
 
   if (loading) {
