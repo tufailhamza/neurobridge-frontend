@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import CaregiverSidebar from '../sidebar';
 import { Clinician } from '@/types/Clinician';
 import { clinicianTypes, specializations } from '@/data/config';
+import { env } from '@/config/env';
 
 export default function SubscribedPage() {
   const [activeTab, setActiveTab] = useState<'subscribed' | 'discover'>('subscribed');
@@ -36,7 +37,7 @@ export default function SubscribedPage() {
         }
 
         // Fetch subscribed clinicians for the current caregiver
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/clinicians/subscribed/${user.user_id}`, {
+        const response = await fetch(`${env.BACKEND_URL}/clinicians/subscribed/${user.user_id}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -89,7 +90,7 @@ export default function SubscribedPage() {
         }
 
         // Fetch discover clinicians (clinicians not yet subscribed)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/clinicians/unsubscribed/${user.user_id}`, {
+        const response = await fetch(`${env.BACKEND_URL}/clinicians/unsubscribed/${user.user_id}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -118,13 +119,64 @@ export default function SubscribedPage() {
     window.location.href = `/clinician/messages?clinician=${clinicianId}`;
   };
 
-  const handleSubscribe = (clinicianId: string) => {
-    const clinicianToSubscribe = discoverCliniciansList.find(c => c.user_id === clinicianId);
-    if (clinicianToSubscribe) {
-      // Add to subscribed list
-      setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, is_subscribed: true }]);
-      // Remove from discover list
-      setDiscoverCliniciansList(prev => prev.filter(c => c.user_id !== clinicianId));
+  const handleSubscribe = async (clinicianId: string) => {
+    try {
+      // Get user info and access token
+      const userInfo = localStorage.getItem('user_info');
+      const accessToken = localStorage.getItem('access_token');
+      
+      if (!userInfo || !accessToken) {
+        throw new Error('User not authenticated');
+      }
+      
+      const user = JSON.parse(userInfo);
+      
+      // Make API call to subscribe
+      const response = await fetch(`${env.BACKEND_URL}/clinicians/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caregiver_id: user.user_id,
+          clinician_id: clinicianId
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please log in again.');
+        } else if (response.status === 403) {
+          throw new Error('Access forbidden. Please check your permissions.');
+        } else if (response.status === 404) {
+          throw new Error('Clinician not found');
+        } else if (response.status === 400) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Bad request');
+        } else {
+          throw new Error(`Failed to subscribe: ${response.status}`);
+        }
+      }
+
+      const result = await response.json();
+      console.log('Subscription successful:', result);
+
+      // Update local state only after successful API call
+      const clinicianToSubscribe = discoverCliniciansList.find(c => c.user_id === clinicianId);
+      if (clinicianToSubscribe) {
+        // Add to subscribed list
+        setSubscribedClinicians(prev => [...prev, { ...clinicianToSubscribe, is_subscribed: true }]);
+        // Remove from discover list
+        setDiscoverCliniciansList(prev => prev.filter(c => c.user_id !== clinicianId));
+      }
+
+      // Show success message (you can replace this with a toast notification)
+      alert('Successfully subscribed to clinician!');
+      
+    } catch (error) {
+      console.error('Error subscribing to clinician:', error);
+      alert(`Failed to subscribe: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
