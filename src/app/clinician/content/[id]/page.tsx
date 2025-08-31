@@ -1,45 +1,174 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import CaregiverSidebar from '../../sidebar';
-import { feedCards } from '@/data/feedCards';
 import { FeedCard } from '@/types/FeedCard';
 import { env } from '@/config/env';
+import { StripeService } from '@/services/stripe';
+import PaymentModal from '@/components/PaymentModal';
+import PurchaseConfirmationModal from '@/components/PurchaseConfirmationModal';
 
 export default function ContentPage() {
   const params = useParams();
+  const router = useRouter();
   const [card, setCard] = useState<FeedCard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
 
   useEffect(() => {
-    console.log('card', params);
-    const cardId = params.id as string;
-    const foundCard = feedCards.find(c => c.id === cardId);
-    setCard(foundCard || null);
-    
-    // Check if user has already purchased this content
-    const checkPurchaseStatus = async () => {
-      try {
-        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-        const userId = userInfo.user_id || userInfo.id;
-        
-        if (userId) {
-          const response = await fetch(`${env.BACKEND_URL}/stripe/purchases/check/${userId}/${cardId}`);
+    if (params.id) {
+      const cardId = params.id as string;
+      console.log('Looking for card with ID:', cardId);
+      
+      // Fetch the specific post from the API
+      const fetchPost = async () => {
+        try {
+          const response = await fetch(`${env.BACKEND_URL}/posts/${cardId}`);
           if (response.ok) {
-            const data = await response.json();
-            setHasPurchased(data.hasAccess);
+            const postData = await response.json();
+            console.log('Found post from API:', postData);
+            setCard(postData);
+          } else {
+            console.log('Post not found in API');
+            setCard(null);
           }
+        } catch (error) {
+          console.error('Error fetching post:', error);
+          setCard(null);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error checking purchase status:', error);
-      }
-    };
+      };
 
-    checkPurchaseStatus();
-    setLoading(false);
+      // Check if user has already purchased this content
+      const checkPurchaseStatus = async () => {
+        try {
+          const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+          const userId = userInfo.user_id || userInfo.id;
+          
+          if (userId) {
+            const response = await fetch(`${env.BACKEND_URL}/stripe/purchases/check/${userId}/${cardId}`);
+            if (response.ok) {
+              const data = await response.json();
+              setHasPurchased(data.hasAccess);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking purchase status:', error);
+        }
+      };
+
+      fetchPost();
+      checkPurchaseStatus();
+    }
   }, [params.id]);
+
+  const handlePurchase = async () => {
+    console.log('Purchase button clicked, card:', card);
+    
+    if (!card || card.price === 0) {
+      // For free content, just redirect to success
+      console.log('Free content, redirecting to purchased page');
+      router.push(`/clinician/purchased?contentId=${card?.id}`);
+      return;
+    }
+
+    // Show payment modal for paid content
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = async (paymentMethodId: string) => {
+    setProcessingPayment(true);
+    setShowPaymentModal(false);
+    
+    try {
+      console.log('Processing payment with method:', paymentMethodId);
+      
+      // Get the actual user ID from localStorage
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      const userId = userInfo.user_id || userInfo.id;
+      
+      if (!userId) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+
+      // Create payment intent with saved payment method
+      console.log('Creating payment intent with:', {
+        amount: Math.round(card!.price * 100),
+        paymentMethodId,
+        metadata: {
+          contentId: card!.id,
+          contentType: 'post',
+          userId: userId.toString(),
+        }
+      });
+
+      const response = await fetch(`${env.BACKEND_URL}/stripe/create-payment-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: Math.round(card!.price * 100), // Convert to cents
+          currency: 'usd',
+          paymentMethodId: paymentMethodId,
+          metadata: {
+            contentId: card!.id,
+            contentType: 'post',
+            userId: userId.toString(),
+          },
+        }),
+      });
+
+      console.log('Payment intent response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Payment intent error response:', errorText);
+        throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
+      }
+
+      const responseData = await response.json();
+      console.log('Payment intent response data:', responseData);
+      
+      const { clientSecret } = responseData;
+      if (!clientSecret) {
+        throw new Error('No client secret returned from backend');
+      }
+
+      console.log('Payment intent created and confirmed successfully on backend');
+      
+      // The backend already confirmed the payment with confirm=True
+      // No need to confirm again on frontend
+      
+      // Update purchase status
+      setHasPurchased(true);
+      
+      // Show confirmation modal instead of redirecting
+      console.log('Showing confirmation modal...');
+      setShowConfirmationModal(true);
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const handleContinueToContent = () => {
+    setShowConfirmationModal(false);
+    // Stay on the same page since user already has access
+  };
+
+  const handleViewPurchased = () => {
+    setShowConfirmationModal(false);
+    router.push('/clinician/purchased');
+  };
 
   if (loading) {
     return (
@@ -73,12 +202,18 @@ export default function ContentPage() {
         
         {/* Column B - Content */}
         <div className="w-4/5 p-6">
-          <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="bg-white rounded-lg shadow-md p-8">            
             {/* Render the HTML content */}
-            <div 
-              dangerouslySetInnerHTML={{ __html: card.html_content }}
-              className="prose max-w-none"
-            />
+            {card.html_content ? (
+              <div 
+                dangerouslySetInnerHTML={{ __html: card.html_content }}
+                className="content-html max-w-none text-gray-900"
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-900 text-lg">No content available</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -95,8 +230,12 @@ export default function ContentPage() {
                     Purchased
                   </div>
                 ) : (
-                  <button className="w-full bg-a text-white py-3 px-6 rounded-lg font-medium hover:bg-opacity-90 transition-colors">
-                    ${card.price}
+                  <button 
+                    onClick={handlePurchase}
+                    disabled={processingPayment}
+                    className="w-full bg-a text-white py-3 px-6 rounded-lg font-medium hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingPayment ? 'Processing...' : (card.price === 0 ? 'Get Free' : `Purchase $${card.price}`)}
                   </button>
                 )}
               </div>
@@ -120,6 +259,26 @@ export default function ContentPage() {
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={handlePaymentSuccess}
+        amount={card?.price || 0}
+        contentTitle={card?.title || ''}
+        // card={card}
+      />
+
+      {/* Purchase Confirmation Modal */}
+      <PurchaseConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => setShowConfirmationModal(false)}
+        contentTitle={card?.title || ''}
+        amount={card?.price || 0}
+        onContinueToContent={handleContinueToContent}
+        onViewPurchased={handleViewPurchased}
+      />
     </div>
   );
 } 

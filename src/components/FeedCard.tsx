@@ -39,8 +39,8 @@ export default function FeedCard({ card }: FeedCardProps) {
 
   const handleCardClick = () => {
     // Determine the route based on user role (you can get this from localStorage or context)
-    const userRole = localStorage.getItem('user_role');
-    if (userRole === 'clinician') {
+    const userRole = JSON.parse(localStorage.getItem('user_info') || '{}');
+    if (userRole.role === 'clinician') {
       router.push(`/clinician/content/${card.id}`);
     } else {
       router.push(`/caregiver/content/${card.id}`);
