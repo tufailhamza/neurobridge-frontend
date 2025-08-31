@@ -149,7 +149,7 @@ export default function CaregiverHomePage() {
     const fetchFeedData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=7`);
+        const response = await fetch(`${env.BACKEND_URL}/posts`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch posts: ${response.status}`);

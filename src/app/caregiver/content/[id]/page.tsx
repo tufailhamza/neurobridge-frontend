@@ -267,7 +267,7 @@ export default function ContentPage() {
         onSuccess={handlePaymentSuccess}
         amount={card?.price || 0}
         contentTitle={card?.title || ''}
-        card={card}
+        // card={card}
       />
 
       {/* Purchase Confirmation Modal */}
