@@ -13,23 +13,39 @@ export default function CaregiverPurchasedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch feed data from backend
+  // Fetch purchased data from backend
   useEffect(() => {
-    const fetchFeedData = async () => {
+    const fetchPurchasedData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${env.BACKEND_URL}/posts/?limit=20`);
+        
+        // Get user_id and access_token from localStorage
+        const userInfo = localStorage.getItem('user_info');
+        const userId = JSON.parse(userInfo || '{}').user_id;
+        const accessToken = localStorage.getItem('access_token');
+        
+        if (!userId || !accessToken) {
+          throw new Error('User not authenticated. Please login again.');
+        }
+
+        const response = await fetch(`${env.BACKEND_URL}/stripe/purchases/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+          }
+        });
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch posts: ${response.status}`);
+          throw new Error(`Failed to fetch purchased content: ${response.status}`);
         }
         
         const data = await response.json();
-        setpaidCards(data.results || data || []);
+        setpaidCards(data || []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching feed data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch feed data');
+        console.error('Error fetching purchased data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch purchased content');
         // Fallback to empty array if API fails
         setpaidCards([]);
       } finally {
@@ -37,7 +53,7 @@ export default function CaregiverPurchasedPage() {
       }
     };
 
-    fetchFeedData();
+    fetchPurchasedData();
   }, []);
 
   return (
@@ -53,10 +69,7 @@ export default function CaregiverPurchasedPage() {
           <div className=" rounded-lg h-full">
             <div className="flex space-x-4 mb-6">
                 <div className="bg-b text-white px-4 py-2 rounded-full">
-                    My Feed
-                </div>
-                <div className="border-2 border-b text-b px-4 py-2 rounded-full">
-                    Discover
+                    My Purchased Content
                 </div>
             </div>
             {/* Scrollable Cards List */}
@@ -65,7 +78,7 @@ export default function CaregiverPurchasedPage() {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-b mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading feed...</p>
+                    <p className="text-gray-600">Loading purchased content...</p>
                   </div>
                 </div>
               ) : error ? (
@@ -80,7 +93,7 @@ export default function CaregiverPurchasedPage() {
                 </div>
               ) : paidCards.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No posts found.</p>
+                  <p className="text-gray-600">No purchased content found.</p>
                 </div>
               ) : (
                 paidCards.map((card) => (
