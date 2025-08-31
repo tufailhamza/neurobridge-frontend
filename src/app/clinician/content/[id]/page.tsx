@@ -8,10 +8,12 @@ import { env } from '@/config/env';
 import { StripeService } from '@/services/stripe';
 import PaymentModal from '@/components/PaymentModal';
 import PurchaseConfirmationModal from '@/components/PurchaseConfirmationModal';
+import { useToastUtils } from '@/utils/toast';
 
 export default function ContentPage() {
   const params = useParams();
   const router = useRouter();
+  const { showSystemError } = useToastUtils();
   const [card, setCard] = useState<FeedCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -39,6 +41,10 @@ export default function ContentPage() {
         } catch (error) {
           console.error('Error fetching post:', error);
           setCard(null);
+          showSystemError(
+            "Failed to load content",
+            "Please refresh the page or try again later"
+          );
         } finally {
           setLoading(false);
         }
@@ -154,7 +160,10 @@ export default function ContentPage() {
       
     } catch (error) {
       console.error('Payment error:', error);
-      alert(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showSystemError(
+        "Payment processing failed",
+        "Please try again or contact support if the issue persists"
+      );
     } finally {
       setProcessingPayment(false);
     }
